@@ -338,6 +338,11 @@ _BEGIN_STD_C
 #define _JBLEN 0x44
 #endif
 
+#ifdef __riscv__
+#define _JBTYPE long
+#define _JBLEN ((16*sizeof(long) + 12*sizeof(double))/sizeof(long))
+#endif
+
 #ifdef _JBLEN
 #ifdef _JBTYPE
 typedef	_JBTYPE jmp_buf[_JBLEN];
