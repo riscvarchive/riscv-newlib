@@ -43,6 +43,8 @@
 #define SYS_getdents 61
 #define SYS_dup 23
 
+extern long __syscall_error(long);
+
 static inline long
 __internal_syscall(long n, long _a0, long _a1, long _a2, long _a3)
 {
@@ -52,11 +54,13 @@ __internal_syscall(long n, long _a0, long _a1, long _a2, long _a3)
   register long a3 asm("a3") = _a3;
   register long a7 asm("a7") = n;
 
-  asm volatile ("scall\n"
-		"bltz a0, __syscall_error"
+  asm volatile ("scall"
 		: "+r"(a0) : "r"(a1), "r"(a2), "r"(a3), "r"(a7));
 
-  return a0;
+  if (a0 < 0)
+    return __syscall_error (a0);
+  else
+    return a0;
 }
 
 #endif
