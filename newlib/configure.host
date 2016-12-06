@@ -217,6 +217,7 @@ case "${host_cpu}" in
   riscv*)
 	machine_dir=riscv
 	newlib_cflags="${newlib_cflags}"
+	default_newlib_atexit_dynamic_alloc="no"
 	;;
   mips*)
 	machine_dir=mips
