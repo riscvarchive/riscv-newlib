@@ -355,7 +355,7 @@ _BEGIN_STD_C
 #define _JBLEN 12
 #endif
 
-#ifdef __riscv__
+#ifdef __riscv
 #define _JBTYPE long
 #define _JBLEN ((14*sizeof(long) + 12*sizeof(double))/sizeof(long))
 #endif

@@ -170,12 +170,8 @@
 #define __IEEE_LITTLE_ENDIAN
 #endif
 
-#ifdef __riscv__
-# ifdef __RISCVEL__
-#  define __IEEE_LITTLE_ENDIAN
-# else
-#  define __IEEE_BIG_ENDIAN
-# endif
+#ifdef __riscv
+#define __IEEE_LITTLE_ENDIAN
 #endif
 
 #ifdef __i960__
