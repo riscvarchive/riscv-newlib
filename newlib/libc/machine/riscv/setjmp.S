@@ -1,27 +1,4 @@
-#ifdef __riscv64
-# define REG_S    sd
-# define REG_L     ld
-# define SZREG 8
-#else
-# define REG_S    sw
-# define REG_L     lw
-# define SZREG 4
-#endif
-
-#ifndef __riscv_float_abi_soft
-/* For ABI uniformity, reserve 8 bytes for floats, even if double-precision
-   floating-point is not supported in hardware.  */
-# define SZFREG 8
-# ifdef __riscv_float_abi_single
-#  define FREG_L flw
-#  define FREG_S fsw
-# elif defined(__riscv_float_abi_double)
-#  define FREG_L fld
-#  define FREG_S fsd
-# else
-#  error unsupported FLEN
-# endif
-#endif
+#include <sys/asm.h>
 
 /* int setjmp (jmp_buf);  */
   .globl  setjmp

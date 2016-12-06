@@ -15,7 +15,7 @@ memset:
   and a2, a2, 15
   add a3, a3, a4
 
-#ifdef __riscv64
+#if __riscv_xlen == 64
 1:sd a1, 0(a4)
   sd a1, 8(a4)
 #else
@@ -64,7 +64,7 @@ memset:
   or  a1, a1, a3
   sll a3, a1, 16
   or  a1, a1, a3
-#ifdef __riscv64
+#if __riscv_xlen == 64
   sll a3, a1, 32
   or  a1, a1, a3
 #endif

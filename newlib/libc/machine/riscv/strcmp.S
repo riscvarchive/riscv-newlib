@@ -54,7 +54,7 @@ strcmp:
 
 .Lloop:
   # examine full words at a time, favoring strings of a couple dozen chars
-#ifdef __riscv32
+#if __riscv_xlen == 32
   check_one_word 0 5
   check_one_word 1 5
   check_one_word 2 5
@@ -69,7 +69,7 @@ strcmp:
 
 .Lmismatch:
   # words don't match, but a2 has no null byte.
-#ifdef __riscv64
+#if __riscv_xlen == 64
   sll   a4, a2, 48
   sll   a5, a3, 48
   bne   a4, a5, .Lmismatch_upper
@@ -115,7 +115,7 @@ strcmp:
   ret
 
   # cases in which a null byte was detected
-#ifdef __riscv32
+#if __riscv_xlen == 32
   foundnull 0 5
   foundnull 1 5
   foundnull 2 5

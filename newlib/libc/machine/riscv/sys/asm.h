@@ -24,46 +24,33 @@
 /* 
  * Macros to handle different pointer/register sizes for 32/64-bit code
  */
-#ifdef __riscv64
-# define PTR .dword
+#if __riscv_xlen == 64
 # define PTRLOG 3
 # define SZREG	8
 # define REG_S sd
 # define REG_L ld
-#else
-# define PTR .word
+#elif __riscv_xlen == 32
 # define PTRLOG 2
 # define SZREG	4
 # define REG_S sw
 # define REG_L lw
+#else
+# error __riscv_xlen must equal 32 or 64
 #endif
 
-/*
- * LEAF - declare leaf routine
- */
-#define	LEAF(symbol)	\
-		.globl	symbol;                         \
-		.align	2;                              \
-		.type	symbol,@function;               \
-symbol:
-
-/*
- * NESTED - declare nested routine entry point
- */
-#define	NESTED(symbol, framesize, rpc) LEAF(symbol)
-
-/*
- * END - mark end of function
- */
-#ifndef END
-# define END(function)                                   \
-		.size	function,.-function
+#ifndef __riscv_float_abi_soft
+/* For ABI uniformity, reserve 8 bytes for floats, even if double-precision
+   floating-point is not supported in hardware.  */
+# define SZFREG 8
+# ifdef __riscv_float_abi_single
+#  define FREG_L flw
+#  define FREG_S fsw
+# elif defined(__riscv_float_abi_double)
+#  define FREG_L fld
+#  define FREG_S fsd
+# else
+#  error unsupported FLEN
+# endif
 #endif
-
-/*
- * Stack alignment
- */
-#define ALSZ	15
-#define ALMASK	~15
 
 #endif /* sys/asm.h */
