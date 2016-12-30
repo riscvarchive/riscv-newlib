@@ -48,6 +48,9 @@
 # elif defined(__riscv_float_abi_double)
 #  define FREG_L fld
 #  define FREG_S fsd
+# elif defined(__riscv_float_abi_quad)
+#  define FREG_L flq
+#  define FREG_S fsq
 # else
 #  error unsupported FLEN
 # endif
