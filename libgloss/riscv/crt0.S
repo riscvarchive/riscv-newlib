@@ -6,8 +6,11 @@
   .global _start
 _start:
   # Initialize global pointer
+.option push
+.option norelax
 1:auipc gp, %pcrel_hi(__global_pointer$)
   addi  gp, gp, %pcrel_lo(1b)
+.option pop
 
   # Clear the bss segment
   la      a0, _edata
