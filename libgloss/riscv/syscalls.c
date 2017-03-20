@@ -1,5 +1,5 @@
 //========================================================================
-// syscalls.c : Newlib operating system interface                       
+// syscalls.c : Newlib operating system interface
 //========================================================================
 // This is the maven implementation of the narrow newlib operating
 // system interface. It is based on the minimum stubs in the newlib
@@ -27,11 +27,11 @@
 //
 //  - Process management functions
 //     + execve : (z) transfer control to new proc
-//     + fork   : (z) create a new process 
-//     + getpid : (v) get process id 
+//     + fork   : (z) create a new process
+//     + getpid : (v) get process id
 //     + kill   : (z) send signal to child process
 //     + wait   : (z) wait for a child process
-//     
+//
 //  - Misc functions
 //     + isatty : (v) query whether output stream is a terminal
 //     + times  : (z) timing information for current process
@@ -43,7 +43,7 @@
 // return a zero when everything is okay (marked with (z) in above
 // list). On an error (ie. when the error flag is 1) the return value is
 // always an errno which should correspond to the numbers in
-// newlib/libc/include/sys/errno.h 
+// newlib/libc/include/sys/errno.h
 //
 // Note that really I think we are supposed to define versions of these
 // functions with an underscore prefix (eg. _open). This is what some of
@@ -58,7 +58,7 @@
 // write, read, etc. So for now we do not use underscores (and we do
 // define MISSING_SYSCALL_NAMES).
 //
-// See the newlib documentation for more information 
+// See the newlib documentation for more information
 // http://sourceware.org/newlib/libc.html#Syscalls
 
 #include <machine/syscall.h>
@@ -72,7 +72,7 @@
 #include <utime.h>
 
 //------------------------------------------------------------------------
-// environment                                                          
+// environment
 //------------------------------------------------------------------------
 // A pointer to a list of environment variables and their values. For a
 // minimal environment, this empty list is adequate. We used to define
@@ -82,9 +82,9 @@
 //
 // char* __env[1] = { 0 };
 // char** environ = __env;
-              
+
 //------------------------------------------------------------------------
-// open                                                                 
+// open
 //------------------------------------------------------------------------
 // Open a file.
 
@@ -103,7 +103,7 @@ int open(const char* name, int flags, int mode)
 }
 
 //------------------------------------------------------------------------
-// openat                                                                
+// openat
 //------------------------------------------------------------------------
 // Open file relative to given directory
 int openat(int dirfd, const char* name, int flags, int mode)
@@ -112,7 +112,7 @@ int openat(int dirfd, const char* name, int flags, int mode)
 }
 
 //------------------------------------------------------------------------
-// lseek                                                                
+// lseek
 //------------------------------------------------------------------------
 // Set position in a file.
 
@@ -122,7 +122,7 @@ off_t lseek(int file, off_t ptr, int dir)
 }
 
 //----------------------------------------------------------------------
-// read                                                                 
+// read
 //----------------------------------------------------------------------
 // Read from a file.
 
@@ -132,7 +132,7 @@ ssize_t read(int file, void* ptr, size_t len)
 }
 
 //------------------------------------------------------------------------
-// write                                                                
+// write
 //------------------------------------------------------------------------
 // Write to a file.
 
@@ -142,7 +142,7 @@ ssize_t write(int file, const void* ptr, size_t len)
 }
 
 //------------------------------------------------------------------------
-// fstat                                                                
+// fstat
 //------------------------------------------------------------------------
 // Status of an open file. The sys/stat.h header file required is
 // distributed in the include subdirectory for this C library.
@@ -153,7 +153,7 @@ int fstat(int file, struct stat* st)
 }
 
 //------------------------------------------------------------------------
-// stat                                                                 
+// stat
 //------------------------------------------------------------------------
 // Status of a file (by name).
 
@@ -163,7 +163,7 @@ int stat(const char* file, struct stat* st)
 }
 
 //------------------------------------------------------------------------
-// lstat                                                                 
+// lstat
 //------------------------------------------------------------------------
 // Status of a link (by name).
 
@@ -173,7 +173,7 @@ int lstat(const char* file, struct stat* st)
 }
 
 //------------------------------------------------------------------------
-// fstatat                                                                 
+// fstatat
 //------------------------------------------------------------------------
 // Status of a file (by name) in a given directory.
 
@@ -183,7 +183,7 @@ int fstatat(int dirfd, const char* file, struct stat* st, int flags)
 }
 
 //------------------------------------------------------------------------
-// access                                                                 
+// access
 //------------------------------------------------------------------------
 // Permissions of a file (by name).
 
@@ -193,7 +193,7 @@ int access(const char* file, int mode)
 }
 
 //------------------------------------------------------------------------
-// faccessat                                                                 
+// faccessat
 //------------------------------------------------------------------------
 // Permissions of a file (by name) in a given directory.
 
@@ -203,17 +203,17 @@ int faccessat(int dirfd, const char* file, int mode, int flags)
 }
 
 //------------------------------------------------------------------------
-// close                                                                
+// close
 //------------------------------------------------------------------------
 // Close a file.
 
-int close(int file) 
+int close(int file)
 {
   return syscall_errno(SYS_close, file, 0, 0, 0);
 }
 
 //------------------------------------------------------------------------
-// link                                                                 
+// link
 //------------------------------------------------------------------------
 // Establish a new name for an existing file.
 
@@ -223,7 +223,7 @@ int link(const char* old_name, const char* new_name)
 }
 
 //------------------------------------------------------------------------
-// unlink                                                               
+// unlink
 //------------------------------------------------------------------------
 // Remove a file's directory entry.
 
@@ -233,7 +233,7 @@ int unlink(const char* name)
 }
 
 //------------------------------------------------------------------------
-// execve                                                               
+// execve
 //------------------------------------------------------------------------
 // Transfer control to a new process. Minimal implementation for a
 // system without processes from newlib documentation.
@@ -245,31 +245,31 @@ int execve(const char* name, char* const argv[], char* const env[])
 }
 
 //------------------------------------------------------------------------
-// fork                                                                 
+// fork
 //------------------------------------------------------------------------
 // Create a new process. Minimal implementation for a system without
 // processes from newlib documentation.
 
-int fork() 
+int fork()
 {
   errno = EAGAIN;
   return -1;
 }
 
 //------------------------------------------------------------------------
-// getpid                                                               
+// getpid
 //------------------------------------------------------------------------
 // Get process id. This is sometimes used to generate strings unlikely
 // to conflict with other processes. Minimal implementation for a
 // system without processes just returns 1.
 
-int getpid() 
+int getpid()
 {
   return 1;
 }
 
 //------------------------------------------------------------------------
-// kill                                                                 
+// kill
 //------------------------------------------------------------------------
 // Send a signal. Minimal implementation for a system without processes
 // just causes an error.
@@ -281,7 +281,7 @@ int kill(int pid, int sig)
 }
 
 //------------------------------------------------------------------------
-// wait                                                                 
+// wait
 //------------------------------------------------------------------------
 // Wait for a child process. Minimal implementation for a system without
 // processes just causes an error.
@@ -293,7 +293,7 @@ int wait(int* status)
 }
 
 //------------------------------------------------------------------------
-// isatty                                                               
+// isatty
 //------------------------------------------------------------------------
 // Query whether output stream is a terminal. For consistency with the
 // other minimal implementations, which only support output to stdout,
@@ -307,7 +307,7 @@ int isatty(int file)
 }
 
 //------------------------------------------------------------------------
-// times                                                                
+// times
 //------------------------------------------------------------------------
 // Timing information for current process. From
 // newlib/libc/include/sys/times.h the tms struct fields are as follows:
@@ -335,12 +335,12 @@ clock_t times(struct tms* buf)
   long long utime = (t.tv_sec-t0.tv_sec)*1000000 + (t.tv_usec-t0.tv_usec);
   buf->tms_utime = utime*CLOCKS_PER_SEC/1000000;
   buf->tms_stime = buf->tms_cstime = buf->tms_cutime = 0;
-  
+
   return -1;
 }
 
 //----------------------------------------------------------------------
-// gettimeofday                                                                 
+// gettimeofday
 //----------------------------------------------------------------------
 // Get the current time.  Only relatively correct.
 
@@ -350,7 +350,7 @@ int gettimeofday(struct timeval* tp, void* tzp)
 }
 
 //----------------------------------------------------------------------
-// ftime                                                                 
+// ftime
 //----------------------------------------------------------------------
 // Get the current time.  Only relatively correct.
 
@@ -427,7 +427,7 @@ long sysconf(int name)
 }
 
 //----------------------------------------------------------------------
-// sbrk                                                                 
+// sbrk
 //----------------------------------------------------------------------
 // Increase program data space. As malloc and related functions depend
 // on this, it is useful to have a working implementation. The following
@@ -453,7 +453,7 @@ void* sbrk(ptrdiff_t incr)
 }
 
 //------------------------------------------------------------------------
-// _exit                                                                
+// _exit
 //------------------------------------------------------------------------
 // Exit a program without cleaning up files.
 
