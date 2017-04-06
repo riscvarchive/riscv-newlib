@@ -71,6 +71,26 @@
 #include <unistd.h>
 #include <utime.h>
 
+struct	kernel_stat
+{
+  unsigned long long st_dev;
+  unsigned long long st_ino;
+  unsigned int st_mode;
+  unsigned int st_nlink;
+  unsigned int st_uid;
+  unsigned int st_gid;
+  unsigned long long st_rdev;
+  unsigned long long __pad1;
+  long long st_size;
+  int st_blksize;
+  int __pad2;
+  long long st_blocks;
+  struct timespec st_atim;
+  struct timespec st_mtim;
+  struct timespec st_ctim;
+  int __glibc_reserved[2];
+};
+
 //------------------------------------------------------------------------
 // environment
 //------------------------------------------------------------------------
@@ -142,6 +162,28 @@ ssize_t write(int file, const void* ptr, size_t len)
 }
 
 //------------------------------------------------------------------------
+// conv_stat
+//------------------------------------------------------------------------
+// Convert linux stat64 sturct to newlib's stat.
+
+static void conv_stat (struct stat* st, struct kernel_stat *kst)
+{
+  st->st_dev = kst->st_dev;
+  st->st_ino = kst->st_ino;
+  st->st_mode = kst->st_mode;
+  st->st_nlink = kst->st_nlink;
+  st->st_uid = kst->st_uid;
+  st->st_gid = kst->st_gid;
+  st->st_rdev = kst->st_rdev;
+  st->st_size = kst->st_size;
+  st->st_blocks = kst->st_blocks;
+  st->st_blksize = kst->st_blksize;
+  st->st_atime = kst->st_atim.tv_sec;
+  st->st_mtime = kst->st_mtim.tv_sec;
+  st->st_ctime = kst->st_ctim.tv_sec;
+}
+
+//------------------------------------------------------------------------
 // fstat
 //------------------------------------------------------------------------
 // Status of an open file. The sys/stat.h header file required is
@@ -149,7 +191,10 @@ ssize_t write(int file, const void* ptr, size_t len)
 
 int fstat(int file, struct stat* st)
 {
-  return syscall_errno(SYS_fstat, file, st, 0, 0);
+  struct kernel_stat kst;
+  int rv = syscall_errno(SYS_fstat, file, &kst, 0, 0);
+  conv_stat (&st, &kst);
+  return rv;
 }
 
 //------------------------------------------------------------------------
@@ -159,7 +204,10 @@ int fstat(int file, struct stat* st)
 
 int stat(const char* file, struct stat* st)
 {
-  return syscall_errno(SYS_stat, file, st, 0, 0);
+  struct kernel_stat kst;
+  int rv = syscall_errno(SYS_stat, file, &kst, 0, 0);
+  conv_stat (&st, &kst);
+  return rv;
 }
 
 //------------------------------------------------------------------------
@@ -169,7 +217,10 @@ int stat(const char* file, struct stat* st)
 
 int lstat(const char* file, struct stat* st)
 {
-  return syscall_errno(SYS_lstat, file, st, 0, 0);
+  struct kernel_stat kst;
+  int rv = syscall_errno(SYS_lstat, file, &kst, 0, 0);
+  conv_stat (&st, &kst);
+  return rv;
 }
 
 //------------------------------------------------------------------------
@@ -179,7 +230,10 @@ int lstat(const char* file, struct stat* st)
 
 int fstatat(int dirfd, const char* file, struct stat* st, int flags)
 {
-  return syscall_errno(SYS_fstatat, dirfd, file, st, flags);
+  struct kernel_stat kst;
+  int rv = syscall_errno(SYS_fstatat, dirfd, file, &kst, flags);
+  conv_stat (&st, &kst);
+  return rv;
 }
 
 //------------------------------------------------------------------------
