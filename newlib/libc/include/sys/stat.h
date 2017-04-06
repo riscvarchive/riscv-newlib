@@ -26,33 +26,6 @@ extern "C" {
 #else
 struct	stat 
 {
-#ifdef __riscv
-  dev_t st_dev;
-  ino_t st_ino;
-#if __riscv_xlen == 32
-  int __st_ino_pad;
-#endif
-  mode_t st_mode;
-  nlink_t st_nlink;
-  uid_t st_uid;
-  gid_t st_gid;
-  dev_t st_rdev;
-  dev_t __pad1;
-  off_t st_size;
-#if __riscv_xlen == 32
-  int __st_size_pad;
-#endif
-  blksize_t st_blksize;
-  int __pad2;
-  blkcnt_t st_blocks;
-#if __riscv_xlen == 32
-  int __st_blocks_pad;
-#endif
-  struct timespec st_atim;
-  struct timespec st_mtim;
-  struct timespec st_ctim;
-  int __glibc_reserved[2];
-#else
   dev_t		st_dev;
   ino_t		st_ino;
   mode_t	st_mode;
@@ -85,10 +58,9 @@ struct	stat
   long	st_spare4[2];
 #endif
 #endif
-#endif
 };
 
-#if defined(__rtems__) || defined(__riscv)
+#if defined(__rtems__)
 #define st_atime st_atim.tv_sec
 #define st_ctime st_ctim.tv_sec
 #define st_mtime st_mtim.tv_sec
