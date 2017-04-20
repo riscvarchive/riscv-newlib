@@ -2,6 +2,7 @@
 
 /* int setjmp (jmp_buf);  */
   .globl  setjmp
+  .type   setjmp, @function
 setjmp:
 	REG_S ra,  0*SZREG(a0)
 	REG_S s0,  1*SZREG(a0)
@@ -35,9 +36,11 @@ setjmp:
 
 	li    a0, 0
 	ret
+	.size	setjmp, .-setjmp
 
 /* volatile void longjmp (jmp_buf, int);  */
   .globl  longjmp
+  .type   longjmp, @function
 longjmp:
 	REG_L ra,  0*SZREG(a0)
 	REG_L s0,  1*SZREG(a0)
@@ -72,3 +75,4 @@ longjmp:
 	seqz a0, a1
 	add  a0, a0, a1   # a0 = (a1 == 0) ? 1 : a1
 	ret
+	.size	longjmp, .-longjmp

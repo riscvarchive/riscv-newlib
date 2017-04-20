@@ -6,6 +6,7 @@
 
 .text
 .globl strcmp
+.type  strcmp, @function
 strcmp:
   or    a4, a0, a1
   li    t2, -1
@@ -126,6 +127,7 @@ strcmp:
   foundnull 1 3
   foundnull 2 3
 #endif
+.size	strcmp, .-strcmp
 
 #if SZREG == 8
 .section .srodata.cst8,"aM",@progbits,8
