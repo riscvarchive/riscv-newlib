@@ -193,7 +193,7 @@ int fstat(int file, struct stat* st)
 {
   struct kernel_stat kst;
   int rv = syscall_errno(SYS_fstat, file, &kst, 0, 0);
-  conv_stat (&st, &kst);
+  conv_stat (st, &kst);
   return rv;
 }
 
@@ -206,7 +206,7 @@ int stat(const char* file, struct stat* st)
 {
   struct kernel_stat kst;
   int rv = syscall_errno(SYS_stat, file, &kst, 0, 0);
-  conv_stat (&st, &kst);
+  conv_stat (st, &kst);
   return rv;
 }
 
@@ -219,7 +219,7 @@ int lstat(const char* file, struct stat* st)
 {
   struct kernel_stat kst;
   int rv = syscall_errno(SYS_lstat, file, &kst, 0, 0);
-  conv_stat (&st, &kst);
+  conv_stat (st, &kst);
   return rv;
 }
 
@@ -232,7 +232,7 @@ int fstatat(int dirfd, const char* file, struct stat* st, int flags)
 {
   struct kernel_stat kst;
   int rv = syscall_errno(SYS_fstatat, dirfd, file, &kst, flags);
-  conv_stat (&st, &kst);
+  conv_stat (st, &kst);
   return rv;
 }
 
