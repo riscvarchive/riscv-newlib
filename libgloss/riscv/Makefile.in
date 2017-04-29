@@ -3,9 +3,7 @@
 #-------------------------------------------------------------------------
 
 gloss_hdrs = \
-	machine/syscfg.h \
 	machine/syscall.h \
-	memory.h \
 
 gloss_srcs = \
 	syscalls.c \
