@@ -71,10 +71,8 @@ RANLIB        := @RANLIB@
 
 # Installation
 
-MKINSTALLDIRS := $(src_dir)/mk-install-dirs.sh
 INSTALL       := @INSTALL@
-INSTALL_HDR   := $(INSTALL) -m 444
-INSTALL_LIB   := $(INSTALL) -m 644
+INSTALL_DATA  := @INSTALL_DATA@
 
 #-------------------------------------------------------------------------
 # Build Object Files from C Source
@@ -150,16 +148,16 @@ deps : $(deps)
 
 install_hdrs_wdir += $(addprefix $(src_dir)/, $(install_hdrs))
 install-hdrs : $(install_hdrs_wdir)
-	$(MKINSTALLDIRS) $(install_hdrs_dir)
+	test -d $(install_hdrs_dir) || mkdir -p $(install_hdrs_dir)
 	for file in $^; do \
-    $(INSTALL_HDR) $$file $(install_hdrs_dir); \
-  done
+		$(INSTALL_DATA) $$file $(install_hdrs_dir)/; \
+	done
 
 install-libs : $(install_libs)
-	$(MKINSTALLDIRS) $(install_libs_dir)
+	test -d $(install_libs_dir) || mkdir -p $(install_libs_dir)
 	for file in $^; do \
-    $(INSTALL_LIB) $$file $(install_libs_dir); \
-  done
+		$(INSTALL_DATA) $$file $(install_libs_dir)/$$file; \
+	done
 
 install : install-hdrs install-libs 
 .PHONY : install install-hdrs install-libs
