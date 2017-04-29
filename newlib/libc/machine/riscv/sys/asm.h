@@ -21,7 +21,7 @@
 #ifndef _SYS_ASM_H
 #define _SYS_ASM_H
 
-/* 
+/*
  * Macros to handle different pointer/register sizes for 32/64-bit code
  */
 #if __riscv_xlen == 64
