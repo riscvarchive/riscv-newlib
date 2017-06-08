@@ -61,7 +61,7 @@ proc newlib_target_compile { source dest type options } {
 
     lappend options "libs=-I$srcdir/include"
     verbose "srcdir is $srcdir"
-	
+
     if {[target_info needs_status_wrapper] != "" && \
 	    [target_info needs_status_wrapper] != "0" && \
 	    [info exists gluefile] } {
@@ -71,7 +71,7 @@ proc newlib_target_compile { source dest type options } {
 
     if [string match $host_triplet $target_triplet] then {
 	if [string match "i686-pc-linux-gnu" $host_triplet] then {
-	    lappend options "libs=$objdir/crt0.o -lc -lgcc"
+	    lappend options "libs=$objdir/crt0.o -lc -lgcc -lm"
 	    lappend options "ldflags=-nostdlib -L$objdir/.libs [newlib_include_flags]"
 	}
     }
@@ -94,7 +94,7 @@ proc newlib_finish { } {
 
 proc newlib_exit { } {
     global gluefile;
-    
+
     verbose "In newlib_exit...\n"
 
     if [info exists gluefile] {
