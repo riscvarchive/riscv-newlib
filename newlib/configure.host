@@ -215,6 +215,7 @@ case "${host_cpu}" in
 	machine_dir=mep
 	;;
   riscv*)
+  	libm_machine_dir=riscv
 	machine_dir=riscv
 	newlib_cflags="${newlib_cflags}"
 	default_newlib_atexit_dynamic_alloc="no"
