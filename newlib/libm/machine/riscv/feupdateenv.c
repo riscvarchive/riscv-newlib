@@ -47,7 +47,7 @@
  * floating-point environment macro."
  */
 
-inline int feupdateenv(const fenv_t *envp)
+int feupdateenv(const fenv_t *envp)
 {
   /* Get current exception flags */
 

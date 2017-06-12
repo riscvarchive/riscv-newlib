@@ -44,7 +44,7 @@
  * queried."
  */
 
-inline int fetestexcept(int excepts)
+int fetestexcept(int excepts)
 {
   /* Mask excepts to be sure only supported flag bits are set */
 

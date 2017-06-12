@@ -51,7 +51,7 @@
  * status flags represented through its argument."
  */
 
-inline int fesetenv(const fenv_t *envp)
+int fesetenv(const fenv_t *envp)
 {
 
   /* Set environment (FCSR) */

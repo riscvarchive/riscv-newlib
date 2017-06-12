@@ -44,7 +44,7 @@
  *
  */
 
-inline int fegetenv(fenv_t *envp)
+int fegetenv(fenv_t *envp)
 {
   /* Get the current environment (FCSR) */
 

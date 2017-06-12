@@ -50,7 +50,7 @@
  *
  */
 
-inline int fesetexceptflag(const fexcept_t *flagp, int excepts)
+int fesetexceptflag(const fexcept_t *flagp, int excepts)
 {
   /* Mask excepts to be sure only supported flag bits are set */
 
