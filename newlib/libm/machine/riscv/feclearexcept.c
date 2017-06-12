@@ -44,7 +44,7 @@
  * floating-point exceptions represented by excepts."
  */
 
-inline int feclearexcept(int excepts)
+int feclearexcept(int excepts)
 {
   /* Mask excepts to be sure only supported flag bits are set */
 

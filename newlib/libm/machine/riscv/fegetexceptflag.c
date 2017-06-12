@@ -45,7 +45,7 @@
  * the object pointed to by the argument flagp."
  */
 
-inline int fegetexceptflag(fexcept_t *flagp, int excepts)
+int fegetexceptflag(fexcept_t *flagp, int excepts)
 {
   /* Mask excepts to be sure only supported flag bits are set */
 

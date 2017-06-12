@@ -45,7 +45,7 @@
  * not changed."
  */
 
-inline int fesetround(int round)
+int fesetround(int round)
 {
   /* Mask round to be sure only valid rounding bits are set */
 

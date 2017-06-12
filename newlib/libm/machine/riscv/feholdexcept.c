@@ -46,7 +46,7 @@
  * floating-point exceptions."
  */
 
-inline int feholdexcept(fenv_t *envp)
+int feholdexcept(fenv_t *envp)
 {
   /* Store the current FP environment in envp*/
 

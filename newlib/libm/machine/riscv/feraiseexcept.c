@@ -51,7 +51,7 @@
  * underflow floating-point exception is implementation-defined."
  */
 
-inline int feraiseexcept(int excepts)
+int feraiseexcept(int excepts)
 {
   /* Mask excepts to be sure only supported flag bits are set */
 

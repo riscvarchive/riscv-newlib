@@ -42,7 +42,7 @@
  * "The fegetround() function shall get the current rounding direction."
  */
 
-inline int fegetround()
+int fegetround()
 {
   /* Get current rounding mode */
 
