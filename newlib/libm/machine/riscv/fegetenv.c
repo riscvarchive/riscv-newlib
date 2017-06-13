@@ -46,6 +46,9 @@
 
 int fegetenv(fenv_t *envp)
 {
+
+#if __riscv_flen
+
   /* Get the current environment (FCSR) */
 
   fenv_t fcsr;
@@ -60,6 +63,8 @@ int fegetenv(fenv_t *envp)
    * "If the representation was successfully stored, fegetenv() shall
    * return zero. Otherwise, it shall return a non-zero value.
    */
+
+#endif
 
   return 0;
 }

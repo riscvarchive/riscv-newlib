@@ -53,9 +53,12 @@
 
 int feraiseexcept(int excepts)
 {
+
   /* Mask excepts to be sure only supported flag bits are set */
 
   excepts &= FE_ALL_EXCEPT;
+
+#if __riscv_flen
 
   /* Set the requested exception flags */
 
@@ -76,5 +79,7 @@ int feraiseexcept(int excepts)
    *
    */
 
-  return 1;
+#endif
+
+  return (excepts != 0);
 }

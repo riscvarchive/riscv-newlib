@@ -44,6 +44,9 @@
 
 int fegetround()
 {
+
+#if __riscv_flen
+
   /* Get current rounding mode */
 
   fenv_t frm;
@@ -60,4 +63,17 @@ int fegetround()
   /* Return the rounding mode */
 
   return frm;
+
+#else
+
+  /* For soft float */
+
+#ifdef FE_TONEAREST
+  return FE_TONEAREST;
+#else
+  return 0;
+#endif
+
+#endif
+
 }

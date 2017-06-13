@@ -1,9 +1,24 @@
 
 #include <stdio.h>
+
+/* This test has only be validated on RISC-V. */
+
+#ifdef __riscv
+
 #include <stdint.h>
 #include <math.h>
 #include <float.h>
 #include <fenv.h>
+
+#define ERR_CHECK(x)				\
+    {						\
+	int e = 0;				\
+	e += x;					\
+	err += e;				\
+	if (e) {				\
+	    printf("%s FAILED\n", #x);		\
+	}					\
+    }
 
 /* Test */
 
@@ -21,52 +36,47 @@ int test(float fs1, float fs2, uint32_t rm, uint32_t xres, uint32_t xflags)
   /* Clear the flags */
 
   feclearexcept(FE_ALL_EXCEPT);
-  err += fegetenv(&env);
-  err += (env & FE_ALL_EXCEPT) != 0;
+  ERR_CHECK(fegetenv(&env));
+  ERR_CHECK((env & FE_ALL_EXCEPT) != 0);
 
   /* Set the rounding mode and perform the op */
 
   fesetround(rm);
   f = fs1 / fs2;
   u = *(uint32_t*)&f;
-  printf("Round %s: (%f / %f) = %f [0x%x]\n", modes[rm], fs1, fs2, f, u);
 
   /* Check the result */
 
-  err += (u != xres);
-  err += fegetenv(&env);
-  err += (env & FE_ALL_EXCEPT) != xflags;
+  ERR_CHECK((u != xres));
+  ERR_CHECK(fegetenv(&env));
+  ERR_CHECK((env & FE_ALL_EXCEPT) != xflags);
 
   /* Get the flags individually via fegetexceptflag() */
 
-  err += fegetexceptflag(&flags, FE_INVALID);
-  err += (flags & FE_INVALID) != (xflags & FE_INVALID);
-
-  err += fegetexceptflag(&flags, FE_DIVBYZERO);
-  err += (flags & FE_DIVBYZERO) != (xflags & FE_DIVBYZERO);
-
-  err += fegetexceptflag(&flags, FE_OVERFLOW);
-  err += (flags & FE_OVERFLOW) != (xflags & FE_OVERFLOW);
-
-  err += fegetexceptflag(&flags, FE_UNDERFLOW);
-  err += (flags & FE_UNDERFLOW) != (xflags & FE_UNDERFLOW);
-
-  err += fegetexceptflag(&flags, FE_INEXACT);
-  err += (flags & FE_INEXACT) != (xflags & FE_INEXACT);
+  ERR_CHECK(fegetexceptflag(&flags, FE_INVALID));
+  ERR_CHECK((flags & FE_INVALID) != (xflags & FE_INVALID));
+  ERR_CHECK(fegetexceptflag(&flags, FE_DIVBYZERO));
+  ERR_CHECK((flags & FE_DIVBYZERO) != (xflags & FE_DIVBYZERO));
+  ERR_CHECK(fegetexceptflag(&flags, FE_OVERFLOW));
+  ERR_CHECK((flags & FE_OVERFLOW) != (xflags & FE_OVERFLOW));
+  ERR_CHECK(fegetexceptflag(&flags, FE_UNDERFLOW));
+  ERR_CHECK((flags & FE_UNDERFLOW) != (xflags & FE_UNDERFLOW));
+  ERR_CHECK(fegetexceptflag(&flags, FE_INEXACT));
+  ERR_CHECK((flags & FE_INEXACT) != (xflags & FE_INEXACT));
 
   /* Test the flags individually via fetestexcept() */
 
-  err += (fetestexcept(FE_INVALID) != (xflags & FE_INVALID));
-  err += (fetestexcept(FE_DIVBYZERO) != (xflags & FE_DIVBYZERO));
-  err += (fetestexcept(FE_OVERFLOW) != (xflags & FE_OVERFLOW));
-  err += (fetestexcept(FE_UNDERFLOW) != (xflags & FE_UNDERFLOW));
-  err += (fetestexcept(FE_INEXACT) != (xflags & FE_INEXACT));
+  ERR_CHECK((fetestexcept(FE_INVALID) != (xflags & FE_INVALID)));
+  ERR_CHECK((fetestexcept(FE_DIVBYZERO) != (xflags & FE_DIVBYZERO)));
+  ERR_CHECK((fetestexcept(FE_OVERFLOW) != (xflags & FE_OVERFLOW)));
+  ERR_CHECK((fetestexcept(FE_UNDERFLOW) != (xflags & FE_UNDERFLOW)));
+  ERR_CHECK((fetestexcept(FE_INEXACT) != (xflags & FE_INEXACT)));
 
   /* Test that rounding mode can be read successfully */
 
   temp = fegetround();
 
-  err += (temp != rm);
+  ERR_CHECK((temp != rm));
 
   return err;
 }
@@ -126,38 +136,50 @@ int test_updateandhold()
 
   env = ~env & FE_ALL_EXCEPT;
 
-  err += feupdateenv(&env);
-  err += fegetenv(&tempenv);
-  err += tempenv != FE_ALL_EXCEPT;
+  ERR_CHECK(feupdateenv(&env));
+  ERR_CHECK(fegetenv(&tempenv));
+  ERR_CHECK(tempenv != FE_ALL_EXCEPT);
 
   /* Make sure that feholdexept() returns the correct env and clears flags */
 
-  err += feholdexcept(&flags);
-  err += flags != FE_ALL_EXCEPT;
+  ERR_CHECK(feholdexcept(&flags));
+  ERR_CHECK(flags != FE_ALL_EXCEPT);
 
-  err += fegetexceptflag(&flags, FE_ALL_EXCEPT);
-  err += flags != 0;
+  ERR_CHECK(fegetexceptflag(&flags, FE_ALL_EXCEPT));
+  ERR_CHECK(flags != 0);
 
   return err;
 }
+
+#endif
 
 /* Call individual tests */
 
 int main(int argc, char **argv)
 {
+#ifdef __riscv
+#ifdef __riscv_flen
   int err = 0;
   fenv_t env = 0;
 
   /* Clear environment (no exceptions, rounding mode 0) */
 
   fesetenv(&env);
-  err += (env & FE_ALL_EXCEPT) != 0;
+  ERR_CHECK((env & FE_ALL_EXCEPT) != 0);
 
   /* Run tests */
 
-  err += test_rounding();
-  err += test_flags();
-  err += test_updateandhold();
+  ERR_CHECK(test_rounding());
+  ERR_CHECK(test_flags());
+  ERR_CHECK(test_updateandhold());
 
   return err;
+#else
+  /* Return pass status for soft float*/
+  return 0;
+#endif
+#else
+  printf("testsuite/newlib.fenv is currently only supported for RISC-V.\n");
+  return 0;
+#endif
 }

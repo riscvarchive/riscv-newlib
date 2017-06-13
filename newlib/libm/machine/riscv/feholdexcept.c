@@ -48,6 +48,9 @@
 
 int feholdexcept(fenv_t *envp)
 {
+
+#if __riscv_flen
+
   /* Store the current FP environment in envp*/
 
   fenv_t fcsr;
@@ -66,6 +69,8 @@ int feholdexcept(fenv_t *envp)
    * non-stop floating-point exception handling was successfully
    * installed."
    */
+
+#endif
 
   return 0;
 }
