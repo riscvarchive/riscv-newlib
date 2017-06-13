@@ -46,6 +46,9 @@
 
 int feclearexcept(int excepts)
 {
+
+#if __riscv_flen
+
   /* Mask excepts to be sure only supported flag bits are set */
 
   excepts &= FE_ALL_EXCEPT;
@@ -71,6 +74,8 @@ int feclearexcept(int excepts)
    * successfully cleared, feclearexcept() shall return zero. Otherwise,
    * it shall return a non-zero value."
    */
+
+#endif
 
   return 0;
 }

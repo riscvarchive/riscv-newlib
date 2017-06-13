@@ -52,6 +52,9 @@
 
 int fesetexceptflag(const fexcept_t *flagp, int excepts)
 {
+
+#if __riscv_flen
+
   /* Mask excepts to be sure only supported flag bits are set */
 
   excepts &= FE_ALL_EXCEPT;
@@ -70,6 +73,8 @@ int fesetexceptflag(const fexcept_t *flagp, int excepts)
    * exceptions were successfully set, fesetexceptflag() shall return
    * zero. Otherwise, it shall return a non-zero value."
    */
+
+#endif
 
   return 0;
 }

@@ -47,6 +47,9 @@
 
 int fesetround(int round)
 {
+
+#if __riscv_flen
+
   /* Mask round to be sure only valid rounding bits are set */
 
   round &= FE_RMODE_MASK;
@@ -60,6 +63,8 @@ int fesetround(int round)
    * "The fesetround() function shall return a zero value if and only
    * if the requested rounding direction was established."
    */
+
+#endif
 
   return 0;
 }

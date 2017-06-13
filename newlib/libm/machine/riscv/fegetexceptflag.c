@@ -47,6 +47,9 @@
 
 int fegetexceptflag(fexcept_t *flagp, int excepts)
 {
+
+#if __riscv_flen
+
   /* Mask excepts to be sure only supported flag bits are set */
 
   excepts &= FE_ALL_EXCEPT;
@@ -67,6 +70,7 @@ int fegetexceptflag(fexcept_t *flagp, int excepts)
    * value."
    */
 
-  return 0;
+#endif
 
+  return 0;
 }

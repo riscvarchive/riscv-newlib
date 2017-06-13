@@ -46,6 +46,9 @@
 
 int fetestexcept(int excepts)
 {
+
+#if __riscv_flen
+
   /* Mask excepts to be sure only supported flag bits are set */
 
   excepts &= FE_ALL_EXCEPT;
@@ -62,4 +65,13 @@ int fetestexcept(int excepts)
    */
 
   return (flags & excepts);
+
+#else
+
+  /* For soft float */
+
+  return 0;
+
+#endif
+
 }
