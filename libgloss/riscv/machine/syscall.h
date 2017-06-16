@@ -52,10 +52,15 @@ __internal_syscall(long n, long _a0, long _a1, long _a2, long _a3)
   register long a1 asm("a1") = _a1;
   register long a2 asm("a2") = _a2;
   register long a3 asm("a3") = _a3;
-  register long a7 asm("a7") = n;
+
+#ifdef __riscv_32e
+  register long syscall_id asm("t0") = n;
+#else
+  register long syscall_id asm("a7") = n;
+#endif
 
   asm volatile ("scall"
-		: "+r"(a0) : "r"(a1), "r"(a2), "r"(a3), "r"(a7));
+		: "+r"(a0) : "r"(a1), "r"(a2), "r"(a3), "r"(syscall_id));
 
   if (a0 < 0)
     return __syscall_error (a0);
