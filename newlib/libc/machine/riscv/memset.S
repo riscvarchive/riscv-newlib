@@ -2,9 +2,9 @@
 .global memset
 .type	memset, @function
 memset:
-  li a6, 15
+  li t1, 15
   move a4, a0
-  bleu a2, a6, .Ltiny
+  bleu a2, t1, .Ltiny
   and a5, a4, 15
   bnez a5, .Lmisaligned
 
@@ -32,7 +32,7 @@ memset:
   ret
 
 .Ltiny:
-  sub a3, a6, a2
+  sub a3, t1, a2
   sll a3, a3, 2
 1:auipc t0, %pcrel_hi(.Ltable)
   add a3, a3, t0
@@ -82,6 +82,6 @@ memset:
   add a5, a5, -16
   sub a4, a4, a5
   add a2, a2, a5
-  bleu a2, a6, .Ltiny
+  bleu a2, t1, .Ltiny
   j .Laligned
   .size	memset, .-memset

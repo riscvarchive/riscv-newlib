@@ -14,18 +14,18 @@ strcmp:
   bnez  a4, .Lmisaligned
 
 #if SZREG == 4
-  li t3, 0x7f7f7f7f
+  li a5, 0x7f7f7f7f
 #else
-  ld t3, mask
+  ld a5, mask
 #endif
 
   .macro check_one_word i n
     REG_L a2, \i*SZREG(a0)
     REG_L a3, \i*SZREG(a1)
 
-    and   t0, a2, t3
-    or    t1, a2, t3
-    add   t0, t0, t3
+    and   t0, a2, a5
+    or    t1, a2, a5
+    add   t0, t0, a5
     or    t0, t0, t1
 
     bne   t0, t2, .Lnull\i

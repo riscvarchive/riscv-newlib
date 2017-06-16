@@ -7,6 +7,8 @@ setjmp:
 	REG_S ra,  0*SZREG(a0)
 	REG_S s0,  1*SZREG(a0)
 	REG_S s1,  2*SZREG(a0)
+
+#ifndef __riscv_32e
 	REG_S s2,  3*SZREG(a0)
 	REG_S s3,  4*SZREG(a0)
 	REG_S s4,  5*SZREG(a0)
@@ -18,6 +20,9 @@ setjmp:
 	REG_S s10,11*SZREG(a0)
 	REG_S s11,12*SZREG(a0)
 	REG_S sp, 13*SZREG(a0)
+#else
+	REG_S sp, 3*SZREG(a0)
+#endif
 
 #ifndef __riscv_float_abi_soft
 	FREG_S fs0, 14*SZREG+ 0*SZFREG(a0)
@@ -45,6 +50,7 @@ longjmp:
 	REG_L ra,  0*SZREG(a0)
 	REG_L s0,  1*SZREG(a0)
 	REG_L s1,  2*SZREG(a0)
+#ifndef __riscv_32e
 	REG_L s2,  3*SZREG(a0)
 	REG_L s3,  4*SZREG(a0)
 	REG_L s4,  5*SZREG(a0)
@@ -56,6 +62,9 @@ longjmp:
 	REG_L s10,11*SZREG(a0)
 	REG_L s11,12*SZREG(a0)
 	REG_L sp, 13*SZREG(a0)
+#else
+	REG_L sp, 3*SZREG(a0)
+#endif
 
 #ifndef __riscv_float_abi_soft
 	FREG_L fs0, 14*SZREG+ 0*SZFREG(a0)

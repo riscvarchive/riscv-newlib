@@ -360,7 +360,11 @@ _BEGIN_STD_C
 
 #ifdef __riscv
 #define _JBTYPE long
+#ifdef __riscv_32e
+#define _JBLEN ((4*sizeof(long))/sizeof(long))
+#else
 #define _JBLEN ((14*sizeof(long) + 12*sizeof(double))/sizeof(long))
+#endif
 #endif
 
 #ifdef _JBLEN
