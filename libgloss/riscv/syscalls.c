@@ -45,19 +45,6 @@
 // always an errno which should correspond to the numbers in
 // newlib/libc/include/sys/errno.h
 //
-// Note that really I think we are supposed to define versions of these
-// functions with an underscore prefix (eg. _open). This is what some of
-// the newlib documentation says, and all the newlib code calls the
-// underscore version. This is because technically I don't think we are
-// supposed to pollute the namespace with these function names. If you
-// define MISSING_SYSCALL_NAMES in xcc/src/newlib/configure.host
-// then xcc/src/newlib/libc/include/_syslist.h will essentially define
-// all of the underscore versions to be equal to the non-underscore
-// versions. I tried not defining MISSING_SYSCALL_NAMES, and newlib
-// compiled fine but libstdc++ complained about not being able to fine
-// write, read, etc. So for now we do not use underscores (and we do
-// define MISSING_SYSCALL_NAMES).
-//
 // See the newlib documentation for more information
 // http://sourceware.org/newlib/libc.html#Syscalls
 
@@ -119,7 +106,7 @@ __syscall_error(long a0)
 }
 
 int
-open(const char *name, int flags, int mode)
+_open(const char *name, int flags, int mode)
 {
   return syscall_errno (SYS_open, name, flags, mode, 0);
 }
@@ -128,7 +115,7 @@ open(const char *name, int flags, int mode)
 // openat
 //------------------------------------------------------------------------
 // Open file relative to given directory
-int openat(int dirfd, const char *name, int flags, int mode)
+int _openat(int dirfd, const char *name, int flags, int mode)
 {
   return syscall_errno (SYS_openat, dirfd, name, flags, mode);
 }
@@ -139,7 +126,7 @@ int openat(int dirfd, const char *name, int flags, int mode)
 // Set position in a file.
 
 off_t
-lseek(int file, off_t ptr, int dir)
+_lseek(int file, off_t ptr, int dir)
 {
   return syscall_errno (SYS_lseek, file, ptr, dir, 0);
 }
@@ -149,7 +136,7 @@ lseek(int file, off_t ptr, int dir)
 //----------------------------------------------------------------------
 // Read from a file.
 
-ssize_t read(int file, void *ptr, size_t len)
+ssize_t _read(int file, void *ptr, size_t len)
 {
   return syscall_errno (SYS_read, file, ptr, len, 0);
 }
@@ -160,7 +147,7 @@ ssize_t read(int file, void *ptr, size_t len)
 // Write to a file.
 
 ssize_t
-write(int file, const void *ptr, size_t len)
+_write(int file, const void *ptr, size_t len)
 {
   return syscall_errno (SYS_write, file, ptr, len, 0);
 }
@@ -195,7 +182,7 @@ conv_stat (struct stat *st, struct kernel_stat *kst)
 // distributed in the include subdirectory for this C library.
 
 int
-fstat(int file, struct stat *st)
+_fstat(int file, struct stat *st)
 {
   struct kernel_stat kst;
   int rv = syscall_errno (SYS_fstat, file, &kst, 0, 0);
@@ -209,7 +196,7 @@ fstat(int file, struct stat *st)
 // Status of a file (by name).
 
 int
-stat(const char *file, struct stat *st)
+_stat(const char *file, struct stat *st)
 {
   struct kernel_stat kst;
   int rv = syscall_errno (SYS_stat, file, &kst, 0, 0);
@@ -236,7 +223,7 @@ int lstat(const char *file, struct stat *st)
 // Status of a file (by name) in a given directory.
 
 int
-fstatat(int dirfd, const char *file, struct stat *st, int flags)
+_fstatat(int dirfd, const char *file, struct stat *st, int flags)
 {
   struct kernel_stat kst;
   int rv = syscall_errno (SYS_fstatat, dirfd, file, &kst, flags);
@@ -260,7 +247,7 @@ access(const char *file, int mode)
 //------------------------------------------------------------------------
 // Permissions of a file (by name) in a given directory.
 
-int faccessat(int dirfd, const char *file, int mode, int flags)
+int _faccessat(int dirfd, const char *file, int mode, int flags)
 {
   return syscall_errno (SYS_faccessat, dirfd, file, mode, flags);
 }
@@ -271,7 +258,7 @@ int faccessat(int dirfd, const char *file, int mode, int flags)
 // Close a file.
 
 int
-close(int file)
+_close(int file)
 {
   return syscall_errno (SYS_close, file, 0, 0, 0);
 }
@@ -281,7 +268,7 @@ close(int file)
 //------------------------------------------------------------------------
 // Establish a new name for an existing file.
 
-int link(const char *old_name, const char *new_name)
+int _link(const char *old_name, const char *new_name)
 {
   return syscall_errno (SYS_link, old_name, new_name, 0, 0);
 }
@@ -292,7 +279,7 @@ int link(const char *old_name, const char *new_name)
 // Remove a file's directory entry.
 
 int
-unlink(const char *name)
+_unlink(const char *name)
 {
   return syscall_errno (SYS_unlink, name, 0, 0, 0);
 }
@@ -304,7 +291,7 @@ unlink(const char *name)
 // system without processes from newlib documentation.
 
 int
-execve(const char *name, char *const argv[], char *const env[])
+_execve(const char *name, char *const argv[], char *const env[])
 {
   errno = ENOMEM;
   return -1;
@@ -316,7 +303,7 @@ execve(const char *name, char *const argv[], char *const env[])
 // Create a new process. Minimal implementation for a system without
 // processes from newlib documentation.
 
-int fork()
+int _fork()
 {
   errno = EAGAIN;
   return -1;
@@ -330,7 +317,7 @@ int fork()
 // system without processes just returns 1.
 
 int
-getpid()
+_getpid()
 {
   return 1;
 }
@@ -342,7 +329,7 @@ getpid()
 // just causes an error.
 
 int
-kill(int pid, int sig)
+_kill(int pid, int sig)
 {
   errno = EINVAL;
   return -1;
@@ -354,7 +341,7 @@ kill(int pid, int sig)
 // Wait for a child process. Minimal implementation for a system without
 // processes just causes an error.
 
-int wait(int *status)
+int _wait(int *status)
 {
   errno = ECHILD;
   return -1;
@@ -368,10 +355,10 @@ int wait(int *status)
 // this minimal implementation is suggested by the newlib docs.
 
 int
-isatty(int file)
+_isatty(int file)
 {
   struct stat s;
-  int ret = fstat (file, &s);
+  int ret = _fstat (file, &s);
   return ret == -1 ? -1 : !!(s.st_mode & S_IFCHR);
 }
 
@@ -392,7 +379,7 @@ isatty(int file)
 // number of cycles since starting the program.
 
 clock_t
-times(struct tms *buf)
+_times(struct tms *buf)
 {
   // when called for the first time, initialize t0
   static struct timeval t0;
@@ -426,7 +413,7 @@ gettimeofday(struct timeval *tp, void *tzp)
 // Get the current time.  Only relatively correct.
 
 int
-ftime(struct timeb *tp)
+_ftime(struct timeb *tp)
 {
   tp->time = tp->millitm = 0;
   return 0;
@@ -438,7 +425,7 @@ ftime(struct timeb *tp)
 // Stub.
 
 int
-utime(const char *path, const struct utimbuf *times)
+_utime(const char *path, const struct utimbuf *times)
 {
   return -1;
 }
@@ -459,7 +446,7 @@ int chown(const char *path, uid_t owner, gid_t group)
 // Stub.
 
 int
-chmod(const char *path, mode_t mode)
+_chmod(const char *path, mode_t mode)
 {
   return -1;
 }
@@ -470,7 +457,7 @@ chmod(const char *path, mode_t mode)
 // Stub.
 
 int
-chdir(const char *path)
+_chdir(const char *path)
 {
   return -1;
 }
@@ -481,7 +468,7 @@ chdir(const char *path)
 // Stub.
 
 char *
-getcwd(char *buf, size_t size)
+_getcwd(char *buf, size_t size)
 {
   return NULL;
 }
@@ -492,7 +479,7 @@ getcwd(char *buf, size_t size)
 // Get configurable system variables
 
 long
-sysconf(int name)
+_sysconf(int name)
 {
   switch (name)
     {
@@ -512,7 +499,7 @@ sysconf(int name)
 // system.
 
 void *
-sbrk(ptrdiff_t incr)
+_sbrk(ptrdiff_t incr)
 {
   static unsigned long heap_end;
 

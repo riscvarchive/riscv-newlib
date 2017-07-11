@@ -812,6 +812,9 @@ case "${host}" in
 	newlib_cflags="${newlib_cflags} -DHAVE_OPENDIR -DHAVE_RENAME -DHAVE_FCNTL -D_NO_POSIX_SPAWN"
 	syscall_dir=syscalls
 	;;
+  riscv*-*-*)
+	syscall_dir=syscalls
+	;;
   sh*-*-*)
 	default_newlib_io_long_long="yes"
 	syscall_dir=syscalls
