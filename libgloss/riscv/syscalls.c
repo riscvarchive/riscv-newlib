@@ -209,7 +209,7 @@ _stat(const char *file, struct stat *st)
 //------------------------------------------------------------------------
 // Status of a link (by name).
 
-int lstat(const char *file, struct stat *st)
+int _lstat(const char *file, struct stat *st)
 {
   struct kernel_stat kst;
   int rv = syscall_errno (SYS_lstat, file, &kst, 0, 0);
@@ -237,7 +237,7 @@ _fstatat(int dirfd, const char *file, struct stat *st, int flags)
 // Permissions of a file (by name).
 
 int
-access(const char *file, int mode)
+_access(const char *file, int mode)
 {
   return syscall_errno (SYS_access, file, mode, 0, 0);
 }
@@ -402,7 +402,7 @@ _times(struct tms *buf)
 // Get the current time.  Only relatively correct.
 
 int
-gettimeofday(struct timeval *tp, void *tzp)
+_gettimeofday(struct timeval *tp, void *tzp)
 {
   return syscall_errno (SYS_gettimeofday, tp, 0, 0, 0);
 }
@@ -435,7 +435,7 @@ _utime(const char *path, const struct utimbuf *times)
 //----------------------------------------------------------------------
 // Stub.
 
-int chown(const char *path, uid_t owner, gid_t group)
+int _chown(const char *path, uid_t owner, gid_t group)
 {
   return -1;
 }
