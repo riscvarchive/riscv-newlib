@@ -65,6 +65,8 @@ case "${target}" in
 	;;
   mn10?00-*-*)
 	;;
+  riscv*-*-*)
+	;;
   powerpcle-*-pe)
 	;;
   sh*-*-*)
