@@ -95,8 +95,8 @@ struct	kernel_stat
 //------------------------------------------------------------------------
 // Open a file.
 
-#define syscall_errno(n, a, b, c, d) \
-        __internal_syscall(n, (long)(a), (long)(b), (long)(c), (long)(d))
+#define syscall_errno(n, a, b, c, d, e, f) \
+        __internal_syscall(n, (long)(a), (long)(b), (long)(c), (long)(d), (long)(e), (long)(f))
 
 long
 __syscall_error(long a0)
@@ -108,7 +108,7 @@ __syscall_error(long a0)
 int
 _open(const char *name, int flags, int mode)
 {
-  return syscall_errno (SYS_open, name, flags, mode, 0);
+  return syscall_errno (SYS_open, name, flags, mode, 0, 0, 0);
 }
 
 //------------------------------------------------------------------------
@@ -117,7 +117,7 @@ _open(const char *name, int flags, int mode)
 // Open file relative to given directory
 int _openat(int dirfd, const char *name, int flags, int mode)
 {
-  return syscall_errno (SYS_openat, dirfd, name, flags, mode);
+  return syscall_errno (SYS_openat, dirfd, name, flags, mode, 0, 0);
 }
 
 //------------------------------------------------------------------------
@@ -128,7 +128,7 @@ int _openat(int dirfd, const char *name, int flags, int mode)
 off_t
 _lseek(int file, off_t ptr, int dir)
 {
-  return syscall_errno (SYS_lseek, file, ptr, dir, 0);
+  return syscall_errno (SYS_lseek, file, ptr, dir, 0, 0, 0);
 }
 
 //----------------------------------------------------------------------
@@ -138,7 +138,7 @@ _lseek(int file, off_t ptr, int dir)
 
 ssize_t _read(int file, void *ptr, size_t len)
 {
-  return syscall_errno (SYS_read, file, ptr, len, 0);
+  return syscall_errno (SYS_read, file, ptr, len, 0, 0, 0);
 }
 
 //------------------------------------------------------------------------
@@ -149,7 +149,7 @@ ssize_t _read(int file, void *ptr, size_t len)
 ssize_t
 _write(int file, const void *ptr, size_t len)
 {
-  return syscall_errno (SYS_write, file, ptr, len, 0);
+  return syscall_errno (SYS_write, file, ptr, len, 0, 0, 0);
 }
 
 //------------------------------------------------------------------------
@@ -185,7 +185,7 @@ int
 _fstat(int file, struct stat *st)
 {
   struct kernel_stat kst;
-  int rv = syscall_errno (SYS_fstat, file, &kst, 0, 0);
+  int rv = syscall_errno (SYS_fstat, file, &kst, 0, 0, 0, 0);
   conv_stat (st, &kst);
   return rv;
 }
@@ -199,7 +199,7 @@ int
 _stat(const char *file, struct stat *st)
 {
   struct kernel_stat kst;
-  int rv = syscall_errno (SYS_stat, file, &kst, 0, 0);
+  int rv = syscall_errno (SYS_stat, file, &kst, 0, 0, 0, 0);
   conv_stat (st, &kst);
   return rv;
 }
@@ -212,7 +212,7 @@ _stat(const char *file, struct stat *st)
 int _lstat(const char *file, struct stat *st)
 {
   struct kernel_stat kst;
-  int rv = syscall_errno (SYS_lstat, file, &kst, 0, 0);
+  int rv = syscall_errno (SYS_lstat, file, &kst, 0, 0, 0, 0);
   conv_stat (st, &kst);
   return rv;
 }
@@ -226,7 +226,7 @@ int
 _fstatat(int dirfd, const char *file, struct stat *st, int flags)
 {
   struct kernel_stat kst;
-  int rv = syscall_errno (SYS_fstatat, dirfd, file, &kst, flags);
+  int rv = syscall_errno (SYS_fstatat, dirfd, file, &kst, flags, 0, 0);
   conv_stat (st, &kst);
   return rv;
 }
@@ -239,7 +239,7 @@ _fstatat(int dirfd, const char *file, struct stat *st, int flags)
 int
 _access(const char *file, int mode)
 {
-  return syscall_errno (SYS_access, file, mode, 0, 0);
+  return syscall_errno (SYS_access, file, mode, 0, 0, 0, 0);
 }
 
 //------------------------------------------------------------------------
@@ -249,7 +249,7 @@ _access(const char *file, int mode)
 
 int _faccessat(int dirfd, const char *file, int mode, int flags)
 {
-  return syscall_errno (SYS_faccessat, dirfd, file, mode, flags);
+  return syscall_errno (SYS_faccessat, dirfd, file, mode, flags, 0, 0);
 }
 
 //------------------------------------------------------------------------
@@ -260,7 +260,7 @@ int _faccessat(int dirfd, const char *file, int mode, int flags)
 int
 _close(int file)
 {
-  return syscall_errno (SYS_close, file, 0, 0, 0);
+  return syscall_errno (SYS_close, file, 0, 0, 0, 0, 0);
 }
 
 //------------------------------------------------------------------------
@@ -270,7 +270,7 @@ _close(int file)
 
 int _link(const char *old_name, const char *new_name)
 {
-  return syscall_errno (SYS_link, old_name, new_name, 0, 0);
+  return syscall_errno (SYS_link, old_name, new_name, 0, 0, 0, 0);
 }
 
 //------------------------------------------------------------------------
@@ -281,7 +281,7 @@ int _link(const char *old_name, const char *new_name)
 int
 _unlink(const char *name)
 {
-  return syscall_errno (SYS_unlink, name, 0, 0, 0);
+  return syscall_errno (SYS_unlink, name, 0, 0, 0, 0, 0);
 }
 
 //------------------------------------------------------------------------
@@ -404,7 +404,7 @@ _times(struct tms *buf)
 int
 _gettimeofday(struct timeval *tp, void *tzp)
 {
-  return syscall_errno (SYS_gettimeofday, tp, 0, 0, 0);
+  return syscall_errno (SYS_gettimeofday, tp, 0, 0, 0, 0, 0);
 }
 
 //----------------------------------------------------------------------
@@ -505,13 +505,13 @@ _sbrk(ptrdiff_t incr)
 
   if (heap_end == 0)
     {
-      long brk = syscall_errno (SYS_brk, 0, 0, 0, 0);
+      long brk = syscall_errno (SYS_brk, 0, 0, 0, 0, 0, 0);
       if (brk == -1)
 	return (void *)-1;
       heap_end = brk;
     }
 
-  if (syscall_errno (SYS_brk, heap_end + incr, 0, 0, 0) != heap_end + incr)
+  if (syscall_errno (SYS_brk, heap_end + incr, 0, 0, 0, 0, 0) != heap_end + incr)
     return (void *)-1;
 
   heap_end += incr;
@@ -526,6 +526,6 @@ _sbrk(ptrdiff_t incr)
 void
 _exit(int exit_status)
 {
-  syscall_errno (SYS_exit, exit_status, 0, 0, 0);
+  syscall_errno (SYS_exit, exit_status, 0, 0, 0, 0, 0);
   while (1);
 }
