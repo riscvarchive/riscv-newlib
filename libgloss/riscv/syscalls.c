@@ -355,12 +355,16 @@ int _wait(int *status)
 // this minimal implementation is suggested by the newlib docs.
 
 int
-_isatty(int file)
+__isatty(int file)
 {
   struct stat s;
   int ret = _fstat (file, &s);
   return ret == -1 ? -1 : !!(s.st_mode & S_IFCHR);
 }
+
+#ifdef __weak_alias
+__weak_alias(_isatty, __isatty)
+#endif
 
 //------------------------------------------------------------------------
 // times
