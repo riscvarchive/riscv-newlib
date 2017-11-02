@@ -1,6 +1,15 @@
 #ifndef _MACHINE_SYSCALL_H
 #define _MACHINE_SYSCALL_H
 
+#include <sys/stat.h>
+#include <sys/times.h>
+#include <sys/time.h>
+#include <sys/timeb.h>
+#include <errno.h>
+#include <string.h>
+#include <unistd.h>
+#include <utime.h>
+
 #define SYS_exit 93
 #define SYS_exit_group 94
 #define SYS_getpid 172
@@ -43,7 +52,12 @@
 #define SYS_getdents 61
 #define SYS_dup 23
 
-extern long __syscall_error(long);
+static inline long
+__syscall_error(long a0)
+{
+  errno = -a0;
+  return -1;
+}
 
 static inline long
 __internal_syscall(long n, long _a0, long _a1, long _a2, long _a3, long _a4, long _a5)
@@ -69,5 +83,31 @@ __internal_syscall(long n, long _a0, long _a1, long _a2, long _a3, long _a4, lon
   else
     return a0;
 }
+
+struct  kernel_stat
+{
+  unsigned long long st_dev;
+  unsigned long long st_ino;
+  unsigned int st_mode;
+  unsigned int st_nlink;
+  unsigned int st_uid;
+  unsigned int st_gid;
+  unsigned long long st_rdev;
+  unsigned long long __pad1;
+  long long st_size;
+  int st_blksize;
+  int __pad2;
+  long long st_blocks;
+  struct timespec st_atim;
+  struct timespec st_mtim;
+  struct timespec st_ctim;
+  int __glibc_reserved[2];
+};
+
+#define syscall_errno(n, a, b, c, d, e, f) \
+        __internal_syscall(n, (long)(a), (long)(b), (long)(c), (long)(d), (long)(e), (long)(f))
+
+
+void _conv_stat (struct stat *st, struct kernel_stat *kst);
 
 #endif
