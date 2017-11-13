@@ -1,0 +1,8 @@
+%rename lib	sim_lib
+%rename link	sim_link
+
+*lib:
+--start-group -lc -lsim --end-group
+
+*link:
+%(sim_link) %:replace-outfile(-lgloss -lsim)
