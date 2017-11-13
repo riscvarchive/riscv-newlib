@@ -40,6 +40,9 @@ gloss_srcs = \
 	sys_wait.c \
 	sys_write.c 
 
+gloss_specs = \
+	nano.specs sim.specs
+
 # Extra files
 
 crt0_asm      = crt0.S
@@ -117,7 +120,7 @@ gloss_c_deps = $(patsubst %.c, %.d, $(notdir $(gloss_c_srcs)))
 $(gloss_c_objs) : %.o : %.c
 	$(COMPILE) -c $<
 
-objs += $(gloss_c_objs)
+gloss_objs += $(gloss_c_objs)
 deps += $(gloss_c_deps)
 junk += $(gloss_c_deps) $(gloss_c_objs)
 
@@ -132,7 +135,7 @@ gloss_asm_deps = $(patsubst %.S, %.d, $(notdir $(gloss_asm_srcs)))
 $(gloss_asm_objs) : %.o : %.S
 	$(COMPILE) -c $<
 
-objs += $(gloss_asm_objs)
+gloss_objs += $(gloss_asm_objs)
 deps += $(gloss_asm_deps)
 junk += $(gloss_asm_deps) $(gloss_asm_objs)
 
@@ -141,14 +144,37 @@ junk += $(gloss_asm_deps) $(gloss_asm_objs)
 #-------------------------------------------------------------------------
 
 gloss_lib  = libgloss.a
-$(gloss_lib) : $(objs)
+$(gloss_lib) : $(gloss_objs)
 	$(AR) rcv $@ $^
 	$(RANLIB) $@
 
-junk += $(gloss_libs)
+junk += $(gloss_lib)
 
 install_hdrs += $(gloss_hdrs)
 install_libs += $(gloss_lib)
+install_specs += $(gloss_specs)
+
+#-------------------------------------------------------------------------
+# Build libsim.a
+#-------------------------------------------------------------------------
+
+sbrk.o: $(src_dir)/../sbrk.c
+	$(COMPILE) -c $<
+sim-syscalls.o: syscalls.c
+	$(COMPILE) -c -DUSING_SIM_SPECS -o $@ $<
+
+sim_c_objs = sbrk.o sim-syscalls.o
+sim_c_deps = $(patsubst %.o, %.d, $(notdir $(sim_c_objs)))
+
+sim_lib  = libsim.a
+$(sim_lib) : $(sim_c_objs)
+	$(AR) rcv $@ $^
+	$(RANLIB) $@
+
+deps += $(sim_c_deps)
+junk += $(sim_lib) $(sim_c_objs) $(sim_c_deps)
+
+install_libs += $(sim_lib)
 
 #-------------------------------------------------------------------------
 # Build crt0.o
@@ -191,7 +217,13 @@ install-libs : $(install_libs)
 		$(INSTALL_DATA) $$file $(install_libs_dir)/$$file; \
 	done
 
-install : install-hdrs install-libs 
+install-specs : $(install_specs)
+	test -d $(install_libs_dir) || mkdir -p $(install_libs_dir)
+	for file in $^; do \
+		$(INSTALL_DATA) $$file $(install_libs_dir)/; \
+	done
+
+install : install-hdrs install-libs install-specs
 .PHONY : install install-hdrs install-libs
 
 #-------------------------------------------------------------------------
