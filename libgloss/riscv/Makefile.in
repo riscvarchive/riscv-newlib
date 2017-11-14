@@ -124,6 +124,16 @@ gloss_objs += $(gloss_c_objs)
 deps += $(gloss_c_deps)
 junk += $(gloss_c_deps) $(gloss_c_objs)
 
+sim_c_objs = $(patsubst %.c, sim-%.o, $(notdir $(gloss_c_srcs)))
+sim_c_deps = $(patsubst %.c, sim-%.d, $(notdir $(gloss_c_srcs)))
+
+$(sim_c_objs): sim-%.o : %.c
+	$(COMPILE) -c -DUSING_SIM_SPECS -o $@ $<
+
+sim_objs += $(sim_c_objs)
+deps += $(sim_c_deps)
+junk += $(sim_c_deps) $(sim_c_objs)
+
 #-------------------------------------------------------------------------
 # Build Object Files from Assembly Source
 #-------------------------------------------------------------------------
@@ -133,11 +143,21 @@ gloss_asm_objs = $(patsubst %.S, %.o, $(notdir $(gloss_asm_srcs)))
 gloss_asm_deps = $(patsubst %.S, %.d, $(notdir $(gloss_asm_srcs)))
 
 $(gloss_asm_objs) : %.o : %.S
-	$(COMPILE) -c $<
+	$(COMPILE) -c -o $@ $<
 
 gloss_objs += $(gloss_asm_objs)
 deps += $(gloss_asm_deps)
 junk += $(gloss_asm_deps) $(gloss_asm_objs)
+
+sim_asm_objs = $(patsubst %.S, sim-%.o, $(notdir $(gloss_asm_srcs)))
+sim_asm_deps = $(patsubst %.S, sim-%.d, $(notdir $(gloss_asm_srcs)))
+
+$(sim_asm_objs) : sim-%.o : %.S
+	$(COMPILE) -c -DUSING_SIM_SPECS -o $@ $<
+
+sim_objs += $(sim_asm_objs)
+deps += $(sim_asm_deps)
+junk += $(sim_asm_deps) $(sim_asm_objs)
 
 #-------------------------------------------------------------------------
 # Build libgloss.a
@@ -158,21 +178,12 @@ install_specs += $(gloss_specs)
 # Build libsim.a
 #-------------------------------------------------------------------------
 
-sbrk.o: $(src_dir)/../sbrk.c
-	$(COMPILE) -c $<
-sim-syscalls.o: syscalls.c
-	$(COMPILE) -c -DUSING_SIM_SPECS -o $@ $<
-
-sim_c_objs = sbrk.o sim-syscalls.o
-sim_c_deps = $(patsubst %.o, %.d, $(notdir $(sim_c_objs)))
-
 sim_lib  = libsim.a
-$(sim_lib) : $(sim_c_objs)
+$(sim_lib) : $(sim_objs)
 	$(AR) rcv $@ $^
 	$(RANLIB) $@
 
-deps += $(sim_c_deps)
-junk += $(sim_lib) $(sim_c_objs) $(sim_c_deps)
+junk += $(sim_lib)
 
 install_libs += $(sim_lib)
 
