@@ -1,3 +1,5 @@
+# Spec file for gdb simulator.
+
 %rename lib	sim_lib
 %rename link	sim_link
 
