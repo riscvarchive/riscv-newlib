@@ -217,7 +217,6 @@ case "${host_cpu}" in
   riscv*)
   	libm_machine_dir=riscv
 	machine_dir=riscv
-	newlib_cflags="${newlib_cflags} -DHAVE_NANOSLEEP"
 	default_newlib_atexit_dynamic_alloc="no"
 	;;
   mips*)
@@ -527,6 +526,11 @@ case "${host}" in
 	;;
   powerpcle-*-pe)
 	posix_dir=posix
+	;;
+  riscv*)
+	unix_dir=unix
+	posix_dir=posix
+	newlib_cflags="${newlib_cflags} -DHAVE_NANOSLEEP"
 	;;
   sh*-*)
 	sys_dir=sh

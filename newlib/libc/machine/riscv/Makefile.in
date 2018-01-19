@@ -58,7 +58,7 @@ lib_a_AR = $(AR) $(ARFLAGS)
 lib_a_LIBADD =
 am_lib_a_OBJECTS = lib_a-memset.$(OBJEXT) lib_a-memcpy.$(OBJEXT) \
 	lib_a-strlen.$(OBJEXT) lib_a-strcpy.$(OBJEXT) lib_a-strcmp.$(OBJEXT) \
-	lib_a-setjmp.$(OBJEXT) lib_a-ieeefp.$(OBJEXT)
+	lib_a-setjmp.$(OBJEXT) lib_a-ieeefp.$(OBJEXT) lib_a-pthread.$(OBJEXT)
 lib_a_OBJECTS = $(am_lib_a_OBJECTS)
 DEFAULT_INCLUDES = -I. -I$(srcdir)
 depcomp =
@@ -186,7 +186,7 @@ AUTOMAKE_OPTIONS = cygnus
 INCLUDES = $(NEWLIB_CFLAGS) $(CROSS_CFLAGS) $(TARGET_CFLAGS)
 AM_CCASFLAGS = $(INCLUDES)
 noinst_LIBRARIES = lib.a
-lib_a_SOURCES = memset.S memcpy.c strlen.c strcmp.S strcpy.c setjmp.S ieeefp.c
+lib_a_SOURCES = memset.S memcpy.c strlen.c strcmp.S strcpy.c setjmp.S ieeefp.c pthread.c
 lib_a_CCASFLAGS = $(AM_CCASFLAGS)
 lib_a_CFLAGS = $(AM_CFLAGS)
 ACLOCAL_AMFLAGS = -I ../../.. -I ../../../..
@@ -296,6 +296,12 @@ lib_a-ieeefp.o: ieeefp.c
 lib_a-ieeefp.obj: ieeefp.c
 	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(lib_a_CFLAGS) $(CFLAGS) -c -o lib_a-ieeefp.obj `if test -f 'ieeefp.c'; then $(CYGPATH_W) 'ieeefp.c'; else $(CYGPATH_W) '$(srcdir)/ieeefp.c'; fi`
 uninstall-info-am:
+
+lib_a-pthread.o: pthread.c
+	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(lib_a_CFLAGS) $(CFLAGS) -c -o lib_a-pthread.o `test -f 'pthread.c' || echo '$(srcdir)/'`pthread.c
+
+lib_a-pthread.obj: pthread.c
+	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(lib_a_CFLAGS) $(CFLAGS) -c -o lib_a-pthread.obj `if test -f 'pthread.c'; then $(CYGPATH_W) 'pthread.c'; else $(CYGPATH_W) '$(srcdir)/pthread.c'; fi`
 
 ID: $(HEADERS) $(SOURCES) $(LISP) $(TAGS_FILES)
 	list='$(SOURCES) $(HEADERS) $(LISP) $(TAGS_FILES)'; \
