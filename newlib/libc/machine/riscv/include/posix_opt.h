@@ -72,6 +72,8 @@
 /* XPG4.2 shared memory is supported.  */
 #define	_XOPEN_SHM	1
 
+#ifdef _WANT_RISCV_PTHREADS
+
 /* Tell we have POSIX threads.  */
 #define _POSIX_THREADS	1
 
@@ -90,6 +92,8 @@
 
 /* We support POSIX.1b semaphores, but only the non-shared form for now.  */
 #define _POSIX_SEMAPHORES	1
+
+#endif /* _WANT_RISCV_PTHREADS */
 
 /* Real-time signals are supported.  */
 #define _POSIX_REALTIME_SIGNALS	1

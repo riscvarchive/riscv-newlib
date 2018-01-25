@@ -782,6 +782,7 @@ SHELL'
 ac_subst_files=''
 ac_user_opts='
 enable_option_checking
+enable_riscv_pthreads
 enable_newlib_io_pos_args
 enable_newlib_io_c99_formats
 enable_newlib_register_fini
@@ -1453,6 +1454,7 @@ Optional Features:
   --disable-option-checking  ignore unrecognized --enable/--with options
   --disable-FEATURE       do not include FEATURE (same as --enable-FEATURE=no)
   --enable-FEATURE[=ARG]  include FEATURE [ARG=yes]
+  --enable-riscv-pthreads   enable pthreads support for riscv bare metal
   --enable-newlib-io-pos-args enable printf-family positional arg support
   --enable-newlib-io-c99-formats   enable C99 support in IO functions like printf/scanf
   --enable-newlib-register-fini   enable finalization function registration using atexit
@@ -2235,6 +2237,16 @@ ac_config_sub="$SHELL $ac_aux_dir/config.sub"  # Please don't use this var.
 ac_configure="$SHELL $ac_aux_dir/configure"  # Please don't use this var.
 
 
+# Check whether --enable-riscv-pthreads was given.
+if test "${enable_riscv_pthreads+set}" = set; then :
+  enableval=$enable_riscv_pthreads; case "${enableval}" in
+  yes) riscv_pthreads=yes;;
+  no)  riscv_pthreads=no ;;
+  *)   as_fn_error $? "bad value ${enableval} for riscv-pthreads option" "$LINENO" 5 ;;
+ esac
+else
+  riscv_pthreads=
+fi
 
 # Check whether --enable-newlib-io-pos-args was given.
 if test "${enable_newlib_io_pos_args+set}" = set; then :
@@ -12287,6 +12299,13 @@ fi
 if test "${newlib_elix_level}" -gt "0"; then
 cat >>confdefs.h <<_ACEOF
 #define _ELIX_LEVEL ${newlib_elix_level}
+_ACEOF
+
+fi
+
+if test "${riscv_pthreads}" = "yes"; then
+cat >>confdefs.h <<_ACEOF
+#define _WANT_RISCV_PTHREADS 1
 _ACEOF
 
 fi
