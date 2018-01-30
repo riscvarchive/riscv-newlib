@@ -7,6 +7,7 @@ gloss_hdrs = \
 
 gloss_srcs = \
 	nanosleep.c \
+	clock_gettime.c \
 	sys_access.c \
 	sys_chdir.c \
 	sys_chmod.c \
