@@ -799,6 +799,7 @@ netware
 or1k
 phoenix
 rdos
+riscv
 rtems
 sh
 sparc64
@@ -11832,6 +11833,8 @@ subdirs="$subdirs a29khif"
 	phoenix) subdirs="$subdirs phoenix"
  ;;
 	rdos) subdirs="$subdirs rdos"
+ ;;
+	riscv) subdirs="$subdirs riscv"
  ;;
 	rtems) subdirs="$subdirs rtems"
  ;;

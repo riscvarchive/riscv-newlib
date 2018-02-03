@@ -531,7 +531,10 @@ case "${host}" in
   riscv*)
 	unix_dir=unix
 	posix_dir=posix
-	newlib_cflags="${newlib_cflags} -DHAVE_NANOSLEEP"
+	sys_dir=riscv
+	# crt0 is provided by libgloss.
+	have_crt0="no"
+	newlib_cflags="${newlib_cflags} -DHAVE_NANOSLEEP -D_COMPILING_NEWLIB"
 	;;
   sh*-*)
 	sys_dir=sh

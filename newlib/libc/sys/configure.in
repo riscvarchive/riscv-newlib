@@ -36,6 +36,7 @@ if test -n "${sys_dir}"; then
 	or1k) AC_CONFIG_SUBDIRS(or1k) ;;
 	phoenix) AC_CONFIG_SUBDIRS(phoenix) ;;
 	rdos) AC_CONFIG_SUBDIRS(rdos) ;;
+	riscv) AC_CONFIG_SUBDIRS(riscv) ;;
 	rtems) AC_CONFIG_SUBDIRS(rtems) ;;
 	sh) AC_CONFIG_SUBDIRS(sh) ;;
 	sparc64) AC_CONFIG_SUBDIRS(sparc64) ;;
