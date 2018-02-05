@@ -9,6 +9,15 @@ AC_CONFIG_HEADERS([_newlib_version.h:_newlib_version.hin newlib.h:newlib.hin])
 dnl Can't be done in NEWLIB_CONFIGURE because that confuses automake. 
 AC_CONFIG_AUX_DIR(..)
 
+dnl Support --enable-riscv-pthreads
+AC_ARG_ENABLE(riscv-pthreads,
+[  --enable-riscv-pthreads   enable pthreads support for riscv bare metal],
+[case "${enableval}" in
+  yes) riscv_pthreads=yes;;
+  no)  riscv_pthreads=no ;;
+  *)   AC_MSG_ERROR(bad value ${enableval} for riscv-pthreads option) ;;
+ esac], [riscv_pthreads=])dnl
+
 dnl Support --enable-newlib-io-pos-args
 dnl This option is actually read in libc/configure.in.  It is repeated
 dnl here so that it shows up in the help text.
@@ -363,6 +372,10 @@ AC_SUBST(CC_FOR_BUILD)
 
 if test "${newlib_elix_level}" -gt "0"; then
 AC_DEFINE_UNQUOTED(_ELIX_LEVEL,${newlib_elix_level})
+fi
+
+if test "${riscv_pthreads}" = "yes"; then
+AC_DEFINE_UNQUOTED(_WANT_RISCV_PTHREADS)
 fi
 
 if test "${newlib_io_c99_formats}" = "yes"; then

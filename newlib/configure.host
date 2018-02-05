@@ -217,7 +217,8 @@ case "${host_cpu}" in
   riscv*)
   	libm_machine_dir=riscv
 	machine_dir=riscv
-	newlib_cflags="${newlib_cflags} -DHAVE_NANOSLEEP"
+	newlib_cflags="${newlib_cflags} -DHAVE_NANOSLEEP -D_COMPILING_NEWLIB"
+	default_riscv_pthreads="no"
 	default_newlib_atexit_dynamic_alloc="no"
 	;;
   mips*)
@@ -867,6 +868,13 @@ case "${host}" in
 esac
 
 # Use defaults for certain settings if not specified by user
+
+# Enable pthreads for RISCV if requested. [still need to link libpthread.a]
+if [ "x${riscv_pthreads}" = "x" ]; then
+       if [ ${default_riscv_pthreads} = "yes" ]; then
+               riscv_pthreads="yes";
+       fi
+fi
 
 # Enable C99 format support in I/O routines if requested.
 if [ "x${newlib_io_c99_formats}" = "x" ]; then
