@@ -26,6 +26,7 @@ extern "C" {
 #endif
 
 #include <_newlib_version.h>
+#include <newlib.h>
 
 /* Macro to test version of GCC.  Returns 0 for non-GCC or too old GCC. */
 #ifndef __GNUC_PREREQ
@@ -313,6 +314,25 @@ extern "C" {
 #else
 #define	__XSI_VISIBLE		0
 #endif
+
+/* RISCV Pthreads */
+#ifdef _WANT_RISCV_PTHREADS
+
+/* Tell we have POSIX threads.  */
+#define _POSIX_THREADS  1
+#define _POSIX_REENTRANT_FUNCTIONS      1
+#define _POSIX_THREAD_SAFE_FUNCTIONS    1
+#define _POSIX_THREAD_ATTR_STACKSIZE    1
+#define _POSIX_THREAD_ATTR_STACKADDR    1
+#define _POSIX_SEMAPHORES       0
+#define _POSIX_BARRIERS                 200112L
+#define _POSIX_READER_WRITER_LOCKS      200112L
+#define _POSIX_SPIN_LOCKS               200112L
+#define _POSIX_TIMERS			1
+/* this is for recursive mutexes */
+#define _UNIX98_THREAD_MUTEX_ATTRIBUTES         1
+
+#endif /* _WANT_RISCV_PTHREADS */
 
 /* RTEMS adheres to POSIX -- 1003.1b with some features from annexes.  */
 

@@ -9,6 +9,9 @@
 /* Newlib version */
 #undef _NEWLIB_VERSION
 
+/* pthreads support in header files for newlib */
+#undef _WANT_RISCV_PTHREADS
+
 /* C99 formats support (such as %a, %zu, ...) in IO functions like
  * printf/scanf enabled */
 #undef _WANT_IO_C99_FORMATS
