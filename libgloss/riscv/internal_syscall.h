@@ -40,7 +40,8 @@ __internal_syscall(long n, long _a0, long _a1, long _a2, long _a3, long _a4, lon
   asm volatile ("scall"
 		: "+r"(a0) : "r"(a1), "r"(a2), "r"(a3), "r"(a4), "r"(a5), "r"(syscall_id));
 
-  if (a0 < 0)
+  // Syscall _sbrk may use negative a0 (ex.: 32-bit system with DRAM base >= 0x80000000).
+  if (a0 < 0 && a0 > -__ELASTERROR)
     return __syscall_error (a0);
   else
     return a0;
