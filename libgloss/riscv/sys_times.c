@@ -33,5 +33,5 @@ _times(struct tms *buf)
   buf->tms_utime = utime * CLOCKS_PER_SEC / 1000000;
   buf->tms_stime = buf->tms_cstime = buf->tms_cutime = 0;
 
-  return 0;
+  return buf->tms_utime;
 }
