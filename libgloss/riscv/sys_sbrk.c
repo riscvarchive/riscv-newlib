@@ -43,12 +43,12 @@ _sbrk(ptrdiff_t incr)
     {
       long brk = __internal_syscall (SYS_brk, 0, 0, 0, 0, 0, 0);
       if (brk == -1)
-        return (void *)__syscall_error (ENOMEM);
+        return (void *)__syscall_error (-ENOMEM);
       heap_end = brk;
     }
 
   if (__internal_syscall (SYS_brk, heap_end + incr, 0, 0, 0, 0, 0) != heap_end + incr)
-    return (void *)__syscall_error (ENOMEM);
+    return (void *)__syscall_error (-ENOMEM);
 
   heap_end += incr;
   return (void *)(heap_end - incr);
