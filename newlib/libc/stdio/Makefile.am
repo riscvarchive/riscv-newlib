@@ -4,7 +4,7 @@ AUTOMAKE_OPTIONS = cygnus
 
 INCLUDES = $(NEWLIB_CFLAGS) $(CROSS_CFLAGS) $(TARGET_CFLAGS)
 
-if NEWLIB_NANO_FORMATTED_IO
+if FORMATTED_IO
 GENERAL_INT_FORMATTED_IO_SOURCES =
 else
 GENERAL_INT_FORMATTED_IO_SOURCES = \
@@ -98,14 +98,14 @@ GENERAL_SOURCES = \
 if ELIX_LEVEL_1
 ELIX_2_SOURCES =
 else
-if NEWLIB_NANO_FORMATTED_IO
+if FORMATTED_IO
 ELIX_2_INT_FORMATTED_IO_SOURCES =
 else
 ELIX_2_INT_FORMATTED_IO_SOURCES = \
 	asiprintf.c		\
 	vasiprintf.c
 
-endif !NEWLIB_NANO_FORMATTED_IO
+endif !FORMATTED_IO
 ELIX_2_SOURCES = \
 	$(ELIX_2_INT_FORMATTED_IO_SOURCES) \
 	asprintf.c		\
@@ -128,7 +128,7 @@ else
 if ELIX_LEVEL_3
 ELIX_4_SOURCES =
 else
-if NEWLIB_NANO_FORMATTED_IO
+if FORMATTED_IO
 ELIX_4_INT_FORMATTED_IO_SOURCES =
 else
 ELIX_4_INT_FORMATTED_IO_SOURCES = \
@@ -136,7 +136,7 @@ ELIX_4_INT_FORMATTED_IO_SOURCES = \
 	diprintf.c		\
 	vasniprintf.c
 
-endif !NEWLIB_NANO_FORMATTED_IO
+endif !FORMATTED_IO
 ELIX_4_SOURCES = \
 	$(ELIX_4_INT_FORMATTED_IO_SOURCES) \
 	asnprintf.c		\
@@ -193,7 +193,7 @@ endif !ELIX_LEVEL_3
 endif !ELIX_LEVEL_2
 endif !ELIX_LEVEL_1
 
-if NEWLIB_NANO_FORMATTED_IO
+if FORMATTED_IO
 LIBADD_OBJS = \
 	$(lpfx)nano-vfprintf_float.$(oext)	\
 	$(lpfx)nano-svfprintf.$(oext)		\
@@ -220,6 +220,10 @@ LIBADD_OBJS = \
 	$(lpfx)vfiwprintf.$(oext) \
 	$(lpfx)svfiwscanf.$(oext) $(lpfx)svfwscanf.$(oext) \
 	$(lpfx)vfiwscanf.$(oext) $(lpfx)vfwscanf.$(oext)
+endif
+
+if NEWLIB_FORMATTED_IO
+LIBADD_OBJS += $(lpfx)vfprintf_longdouble.$(oext)
 endif
 
 libstdio_la_LDFLAGS = -Xcompiler -nostdlib
@@ -251,7 +255,7 @@ include $(srcdir)/../../Makefile.shared
 # implementation will be neither compiled nor archived into final
 # library, because they are not depended on by final makefile target.
 
-if NEWLIB_NANO_FORMATTED_IO
+if FORMATTED_IO
 # Rules compiling small-footprint nano-formatted-io implementation.
 $(lpfx)nano-vfprintf.$(oext): nano-vfprintf.c
 	$(LIB_COMPILE) -c $(srcdir)/nano-vfprintf.c -o $@
@@ -264,6 +268,11 @@ $(lpfx)nano-vfprintf_float.$(oext): nano-vfprintf_float.c
 
 $(lpfx)nano-svfprintf.$(oext): nano-vfprintf.c
 	$(LIB_COMPILE) -DSTRING_ONLY -c $(srcdir)/nano-vfprintf.c -o $@
+endif
+
+if NEWLIB_FORMATTED_IO
+$(lpfx)vfprintf_longdouble.$(oext): vfprintf_longdouble.c
+	$(LIB_COMPILE) -c $(srcdir)/vfprintf_longdouble.c -o $@
 endif
 
 # This rule is needed so that libtool compiles vfiprintf before vfprintf.
@@ -287,7 +296,7 @@ $(lpfx)svfwprintf.$(oext): vfwprintf.c
 $(lpfx)svfiwprintf.$(oext): vfwprintf.c
 	$(LIB_COMPILE) -DINTEGER_ONLY -DSTRING_ONLY -c $(srcdir)/vfwprintf.c -o $@
 
-if NEWLIB_NANO_FORMATTED_IO
+if FORMATTED_IO
 # Rules compiling small-footprint nano-formatted-io implementation.
 $(lpfx)nano-vfscanf.$(oext): nano-vfscanf.c
 	$(LIB_COMPILE) -c $(srcdir)/nano-vfscanf.c -o $@
@@ -326,7 +335,7 @@ $(lpfx)svfwscanf.$(oext): vfwscanf.c
 $(lpfx)svfiwscanf.$(oext): vfwscanf.c
 	$(LIB_COMPILE) -DINTEGER_ONLY -DSTRING_ONLY -c $(srcdir)/vfwscanf.c -o $@
 
-if NEWLIB_NANO_FORMATTED_IO
+if FORMATTED_IO
 CHEWOUT_INT_FORMATTED_IO_FILES =\
 	nano-vfprintf.def	\
 	nano-vfprintf_i.def	\
@@ -344,6 +353,11 @@ CHEWOUT_INT_FORMATTED_IO_FILES =\
 	viprintf.def		\
 	viscanf.def
 endif
+
+if NEWLIB_FORMATTED_IO
+CHEWOUT_INT_FORMATTED_IO_FILES += vfprintf_longdouble.def
+endif
+
 CHEWOUT_FILES = \
 	$(CHEWOUT_INT_FORMATTED_IO_FILES)	\
 	clearerr.def		\
@@ -486,7 +500,7 @@ $(lpfx)sniprintf.$(oext): local.h
 $(lpfx)sprintf.$(oext): local.h
 $(lpfx)sscanf.$(oext): local.h
 $(lpfx)stdio.$(oext): local.h
-if NEWLIB_NANO_FORMATTED_IO
+if FORMATTED_IO
 $(lpfx)nano-svfprintf.$(oext): local.h nano-vfprintf_local.h
 $(lpfx)nano-svfscanf.$(oext): local.h nano-vfscanf_local.h
 endif
@@ -498,13 +512,16 @@ $(lpfx)swprintf.$(oext): local.h
 $(lpfx)swscanf.$(oext): local.h
 $(lpfx)ungetc.$(oext): local.h
 $(lpfx)ungetwc.$(oext): local.h
-if NEWLIB_NANO_FORMATTED_IO
+if FORMATTED_IO
 $(lpfx)nano-vfprintf.$(oext): local.h nano-vfprintf_local.h
 $(lpfx)nano-vfprintf_i.$(oext): local.h nano-vfprintf_local.h
 $(lpfx)nano-vfprintf_float.$(oext): local.h floatio.h nano-vfprintf_local.h
 $(lpfx)nano-vfscanf.$(oext): local.h nano-vfscanf_local.h
 $(lpfx)nano-vfscanf_i.$(oext): local.h nano-vfscanf_local.h
 $(lpfx)nano-vfscanf_float.$(oext): local.h floatio.h nano-vfscanf_local.h
+endif
+if NEWLIB_FORMATTED_IO
+$(lpfx)vfprintf_longdouble.$(oext): local.h nano-vfprintf_local.h
 endif
 $(lpfx)vfiprintf.$(oext): local.h
 $(lpfx)vfiscanf.$(oext): local.h floatio.h
