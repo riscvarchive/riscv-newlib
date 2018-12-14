@@ -615,12 +615,15 @@ _VFPRINTF_R (struct _reent *data,
       /* The conversion specifiers.  */
       prt_data.code = *fmt++;
       cp = memchr ("efgEFG", prt_data.code, 6);
+
 #ifdef FLOATING_POINT
       /* If cp is not NULL, we are facing FLOATING POINT NUMBER.  */
       if (cp)
 	{
+	
 	  /* Consume floating point argument if _printf_float is not
 	     linked.  */
+#ifdef NEWLIB_NANO_FORMATTED_IO	  
 	  if (_printf_float == NULL)
 	    {
 	      if (prt_data.flags & LONGDBL)
@@ -628,8 +631,19 @@ _VFPRINTF_R (struct _reent *data,
 	      else
 		GET_ARG (N, ap_copy, double);
 	    }
-	  else
+	  else  
             n = _printf_float (data, &prt_data, fp, pfunc, &ap_copy);
+#else
+            
+	if ((prt_data.flags & LONGDBL) && _printf_longdouble != NULL)
+	{
+            n = _printf_longdouble (data, &prt_data, fp, pfunc, &ap_copy);
+	} else if (!(prt_data.flags & LONGDBL))
+	{
+		n = _printf_float (data, &prt_data, fp, pfunc, &ap_copy);	
+	}
+#endif /* NEWLIB_NANO_FORMATTED_IO */            
+      
 	}
       else
 #endif

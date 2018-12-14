@@ -69,17 +69,30 @@ __cvt (struct _reent *data, _PRINTF_FLOAT_TYPE value, int ndigits, int flags,
 {
   int mode, dsgn;
   char *digits, *bp, *rve;
-  union double_union tmp;
 
-  tmp.d = value;
-  /* This will check for "< 0" and "-0.0".  */
-  if (word0 (tmp) & Sign_bit)
-    {
-      value = -value;
-      *sign = '-';
-    }
-  else
-    *sign = '\000';
+#ifdef _NO_LONGDBL
+	union double_union tmp;
+
+	tmp.d = value;
+	if (word0 (tmp) & Sign_bit) { /* this will check for < 0 and -0.0 */
+		value = -value;
+		*sign = '-';
+	} else
+		*sign = '\000';
+# else /* !_NO_LONGDBL */
+	union
+	{
+	  struct ldieee ieee;
+	  _LONG_DOUBLE val;
+	} ld;
+
+	ld.val = value;
+	if (ld.ieee.sign) { /* this will check for < 0 and -0.0 */
+		value = -value;
+		*sign = '-';
+	} else
+		*sign = '\000';
+# endif /* !_NO_LONGDBL */
 
   if (ch == 'f' || ch == 'F')
     {
@@ -95,7 +108,7 @@ __cvt (struct _reent *data, _PRINTF_FLOAT_TYPE value, int ndigits, int flags,
 	  ndigits++;
 	}
       /* Ndigits significant digits.  */
-      mode = 2;
+      mode = 2; 
     }
 
   digits = _DTOA_R (data, value, mode, ndigits, decpt, &dsgn, &rve);
