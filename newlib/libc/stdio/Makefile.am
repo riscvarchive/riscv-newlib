@@ -257,9 +257,6 @@ include $(srcdir)/../../Makefile.shared
 
 if FORMATTED_IO
 # Rules compiling small-footprint nano-formatted-io implementation.
-$(lpfx)nano-vfprintf.$(oext): nano-vfprintf.c
-	$(LIB_COMPILE) -c $(srcdir)/nano-vfprintf.c -o $@
-
 $(lpfx)nano-vfprintf_i.$(oext): nano-vfprintf_i.c
 	$(LIB_COMPILE) -c $(srcdir)/nano-vfprintf_i.c -o $@
 
@@ -272,11 +269,15 @@ $(lpfx)vfprintf_longdouble.$(oext): vfprintf_longdouble.c
 	$(LIB_COMPILE) -D_WANT_IO_LONG_DOUBLE -c $(srcdir)/vfprintf_longdouble.c -o $@
 $(lpfx)nano-vfprintf_float.$(oext): nano-vfprintf_float.c
 	$(LIB_COMPILE) -D_WANT_IO_LONG_DOUBLE -c $(srcdir)/nano-vfprintf_float.c -o $@
+$(lpfx)nano-vfprintf.$(oext): nano-vfprintf.c
+	$(LIB_COMPILE) -DNEWLIB_FORMATTED_IO -c $(srcdir)/nano-vfprintf.c -o $@
 endif
 
 if NEWLIB_NANO_FORMATTED_IO
 $(lpfx)nano-vfprintf_float.$(oext): nano-vfprintf_float.c
 	$(LIB_COMPILE) -c $(srcdir)/nano-vfprintf_float.c -o $@
+$(lpfx)nano-vfprintf.$(oext): nano-vfprintf.c
+	$(LIB_COMPILE) -c $(srcdir)/nano-vfprintf.c -o $@
 endif
 
 # This rule is needed so that libtool compiles vfiprintf before vfprintf.
