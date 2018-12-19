@@ -48,6 +48,8 @@
 #include "vfieeefp.h"
 #include "nano-vfprintf_local.h"
 
+
+
 #define _NO_LONGDBL
 #if defined _WANT_IO_LONG_DOUBLE && (LDBL_MANT_DIG > DBL_MANT_DIG)
 #undef _NO_LONGDBL
@@ -62,13 +64,71 @@ extern int _ldcheck (_LONG_DOUBLE *);
    converts a finite value into infinity.  */
 /* #  define FREXP frexpl */
 
-char *__cvt (struct _reent *data, _PRINTF_FLOAT_TYPE value, int ndigits,
+static char *__cvt (struct _reent *data, _PRINTF_FLOAT_TYPE value, int ndigits,
 	     int flags, char *sign, int *decpt, int ch, int *length,
 	     char *buf);
 
 int __exponent (char *p0, int exp, int fmtch);
 
 #ifdef FLOATING_POINT
+
+static char *
+__cvt (struct _reent *data, _PRINTF_FLOAT_TYPE value, int ndigits, int flags,
+       char *sign, int *decpt, int ch, int *length, char *buf)
+{
+  int mode, dsgn;
+  char *digits, *bp, *rve;
+
+	union
+	{
+	  struct ldieee ieee;
+	  _LONG_DOUBLE val;
+	} ld;
+	ld.val = value;
+	if (ld.ieee.sign) { /* this will check for < 0 and -0.0 */
+		value = -value;
+		*sign = '-';
+	} else
+		*sign = '\000';
+
+  if (ch == 'f' || ch == 'F')
+    {
+      /* Ndigits after the decimal point.  */
+      mode = 3;
+    }
+  else
+    {
+      /* To obtain ndigits after the decimal point for the 'e'
+	 and 'E' formats, round to ndigits + 1 significant figures.  */
+      if (ch == 'e' || ch == 'E')
+	{
+	  ndigits++;
+	}
+      /* Ndigits significant digits.  */
+      mode = 2; 
+    }
+
+  digits = _DTOA_R (data, value, mode, ndigits, decpt, &dsgn, &rve);
+
+  /* Print trailing zeros.  */
+  if ((ch != 'g' && ch != 'G') || flags & ALT)
+    {
+      bp = digits + ndigits;
+      if (ch == 'f' || ch == 'F')
+	{
+	  if (*digits == '0' && value)
+	    *decpt = -ndigits + 1;
+	  bp += *decpt;
+	}
+      /* Kludge for __dtoa irregularity.  */
+      if (value == 0)
+	rve = bp;
+      while (rve < bp)
+	*rve++ = '0';
+    }
+  *length = rve - digits;
+  return (digits);
+}
 
 
 

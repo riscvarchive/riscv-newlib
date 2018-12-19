@@ -623,7 +623,7 @@ _VFPRINTF_R (struct _reent *data,
 	
 	  /* Consume floating point argument if _printf_float is not
 	     linked.  */
-#ifdef NEWLIB_NANO_FORMATTED_IO	  
+#ifndef NEWLIB_NANO_FORMATTED_IO	  
 	  if (_printf_float == NULL)
 	    {
 	      if (prt_data.flags & LONGDBL)
