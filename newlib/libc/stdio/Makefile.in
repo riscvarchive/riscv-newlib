@@ -1890,9 +1890,9 @@ docbook: $(DOCBOOK_OUT_FILES)
 @FORMATTED_IO_TRUE@	$(LIB_COMPILE) -DSTRING_ONLY -c $(srcdir)/nano-vfprintf.c -o $@
 
 @NEWLIB_FORMATTED_IO_TRUE@$(lpfx)vfprintf_longdouble.$(oext): vfprintf_longdouble.c
-@NEWLIB_FORMATTED_IO_TRUE@	$(LIB_COMPILE) -DWANT_IO_LONG_DOUBLE -c $(srcdir)/vfprintf_longdouble.c -o $@
+@NEWLIB_FORMATTED_IO_TRUE@	$(LIB_COMPILE) -D_WANT_IO_LONG_DOUBLE -c $(srcdir)/vfprintf_longdouble.c -o $@
 @NEWLIB_FORMATTED_IO_TRUE@$(lpfx)nano-vfprintf_float.$(oext): nano-vfprintf_float.c
-@NEWLIB_FORMATTED_IO_TRUE@	$(LIB_COMPILE) -DWANT_IO_LONG_DOUBLE -c $(srcdir)/nano-vfprintf_float.c -o $@
+@NEWLIB_FORMATTED_IO_TRUE@	$(LIB_COMPILE) -D_WANT_IO_LONG_DOUBLE -c $(srcdir)/nano-vfprintf_float.c -o $@
 
 @NEWLIB_NANO_FORMATTED_IO_TRUE@$(lpfx)nano-vfprintf_float.$(oext): nano-vfprintf_float.c
 @NEWLIB_NANO_FORMATTED_IO_TRUE@	$(LIB_COMPILE) -c $(srcdir)/nano-vfprintf_float.c -o $@
