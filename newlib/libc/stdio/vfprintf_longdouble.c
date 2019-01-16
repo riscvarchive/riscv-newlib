@@ -79,17 +79,17 @@ __cvt (struct _reent *data, _PRINTF_FLOAT_TYPE value, int ndigits, int flags,
   int mode, dsgn;
   char *digits, *bp, *rve;
 
-	union
-	{
-	  struct ldieee ieee;
-	  _LONG_DOUBLE val;
-	} ld;
-	ld.val = value;
-	if (ld.ieee.sign) { /* this will check for < 0 and -0.0 */
-		value = -value;
-		*sign = '-';
-	} else
-		*sign = '\000';
+  union
+  {
+  struct ldieee ieee;
+  _LONG_DOUBLE val;
+  } ld;
+  ld.val = value;
+  if (ld.ieee.sign) { /* this will check for < 0 and -0.0 */
+    value = -value;
+    *sign = '-';
+  } else
+	*sign = '\000';
 
   if (ch == 'f' || ch == 'F')
     {
@@ -101,9 +101,9 @@ __cvt (struct _reent *data, _PRINTF_FLOAT_TYPE value, int ndigits, int flags,
       /* To obtain ndigits after the decimal point for the 'e'
 	 and 'E' formats, round to ndigits + 1 significant figures.  */
       if (ch == 'e' || ch == 'E')
-	{
-	  ndigits++;
-	}
+	   {
+	     ndigits++;
+	   }
       /* Ndigits significant digits.  */
       mode = 2; 
     }
@@ -115,16 +115,16 @@ __cvt (struct _reent *data, _PRINTF_FLOAT_TYPE value, int ndigits, int flags,
     {
       bp = digits + ndigits;
       if (ch == 'f' || ch == 'F')
-	{
-	  if (*digits == '0' && value)
-	    *decpt = -ndigits + 1;
-	  bp += *decpt;
-	}
+	    {
+		  if (*digits == '0' && value)
+		    *decpt = -ndigits + 1;
+		  bp += *decpt;
+	    }
       /* Kludge for __dtoa irregularity.  */
       if (value == 0)
-	rve = bp;
+	     rve = bp;
       while (rve < bp)
-	*rve++ = '0';
+	    *rve++ = '0';
     }
   *length = rve - digits;
   return (digits);
@@ -140,8 +140,7 @@ _printf_longdouble (struct _reent *data,
 	       int (*pfunc) (struct _reent *, FILE *, const char *,
 			     size_t len), va_list * ap)
 {
-long double _fpvalue;
-   
+  long double _fpvalue;
   char *decimal_point = _localeconv_r (data)->decimal_point;
   size_t decp_len = strlen (decimal_point);
   /* Temporary negative sign for floats.  */
@@ -158,41 +157,38 @@ long double _fpvalue;
   int realsz;
   char code = pdata->code;
   
-   if (pdata->flags & LONGDBL) {
+  if (pdata->flags & LONGDBL) {
 
-	_fpvalue = GET_ARG (N, *ap, _LONG_DOUBLE);
+	  _fpvalue = GET_ARG (N, *ap, _LONG_DOUBLE);
   } else {
-	_fpvalue = (_LONG_DOUBLE)GET_ARG (N, *ap, double);
+	  _fpvalue = (_LONG_DOUBLE)GET_ARG (N, *ap, double);
   }
 
 /* do this before tricky precision changes */
- expt = _ldcheck (&_fpvalue);
-	if (expt == 2) {
-	
-				if (_fpvalue < 0)
-					pdata->l_buf[0] = '-';
-				if (code <= 'G') /* 'A', 'E', 'F', or 'G' */
-					cp = "INF";
-				else
-					cp = "inf";
-				pdata->size = 3;
-				pdata->flags &= ~ZEROPAD;
-			    goto print_longdouble;
-			}
-			if (expt == 1) {
+  expt = _ldcheck (&_fpvalue);
+  if (expt == 2) 
+	 {
+	   if (_fpvalue < 0)
+		 pdata->l_buf[0] = '-';
+	   if (code <= 'G') /* 'A', 'E', 'F', or 'G' */
+		 cp = "INF";
+	   else
+		 cp = "inf";
+	   pdata->size = 3;
+	   pdata->flags &= ~ZEROPAD;
+	   goto print_longdouble;
+	 }
+  if (expt == 1) 
+	 {
+	   if (code <= 'G') /* 'A', 'E', 'F', or 'G' */
+		  cp = "NAN";
+		else
+		  cp = "nan";
+		pdata->size = 3;
+		pdata->flags &= ~ZEROPAD;
+		goto print_longdouble;
 			
-				
-				if (code <= 'G') /* 'A', 'E', 'F', or 'G' */
-					cp = "NAN";
-				else
-					cp = "nan";
-				pdata->size = 3;
-				pdata->flags &= ~ZEROPAD;
-				goto print_longdouble;
-				
-			}
-
-  
+	  }
 
   if (pdata->prec == -1)
     {
@@ -211,10 +207,10 @@ long double _fpvalue;
   if (code == 'g' || code == 'G')
     {
       if (expt <= -4 || expt > pdata->prec)
-	/* 'e' or 'E'.  */
-	code -= 2;
+	    /* 'e' or 'E'.  */
+	    code -= 2;
       else
-	code = 'g';
+	    code = 'g';
     }
   if (code <= 'e')
     {
@@ -223,7 +219,7 @@ long double _fpvalue;
       expsize = __exponent (pdata->expstr, expt, code);
       pdata->size = expsize + ndig;
       if (ndig > 1 || pdata->flags & ALT)
-	++pdata->size;
+	    ++pdata->size;
     }
   else
     {
@@ -249,7 +245,7 @@ long double _fpvalue;
 	    ++pdata->size;
 	}
       else
-	pdata->size = ndig + (expt > 0 ? 1 : 2 - expt);
+	    pdata->size = ndig + (expt > 0 ? 1 : 2 - expt);
       pdata->lead = expt;
     }
 
@@ -267,59 +263,59 @@ print_longdouble:
     {
       /* Glue together f_p fragments.  */
       if (code >= 'f')
-	{
-	  /* 'f' or 'g'.  */
-	  if (_fpvalue == 0)
 	    {
-	      /* Kludge for __dtoa irregularity.  */
-	      PRINT ("0", 1);
-	      if (expt < ndig || pdata->flags & ALT)
-		{
-		  PRINT (decimal_point, decp_len);
-		  PAD (ndig - 1, pdata->zero);
-		}
-	    }
-	  else if (expt <= 0)
-	    {
-	      PRINT ("0", 1);
-	      if (expt || ndig || pdata->flags & ALT)
-		{
-		  PRINT (decimal_point, decp_len);
-		  PAD (-expt, pdata->zero);
-		  PRINT (cp, ndig);
-		}
-	    }
-	  else
-	    {
-	      char *convbuf = cp;
-	      PRINTANDPAD (cp, convbuf + ndig, pdata->lead, pdata->zero);
-	      cp += pdata->lead;
-	      if (expt < ndig || pdata->flags & ALT)
-		PRINT (decimal_point, decp_len);
-	      PRINTANDPAD (cp, convbuf + ndig, ndig - expt, pdata->zero);
-	    }
-	}
-      else
-	{
-	  /* 'a', 'A', 'e', or 'E'.  */
-	  if (ndig > 1 || pdata->flags & ALT)
-	    {
-	      PRINT (cp, 1);
-	      cp++;
-	      PRINT (decimal_point, decp_len);
-	      if (_fpvalue)
-		{
-		  PRINT (cp, ndig - 1);
-		}
-	      /* "0.[0..]".  */
+	      /* 'f' or 'g'.  */
+	      if (_fpvalue == 0)
+	        { 
+	          /* Kludge for __dtoa irregularity.  */
+	          PRINT ("0", 1);
+	          if (expt < ndig || pdata->flags & ALT)
+		        {
+		          PRINT (decimal_point, decp_len);
+		          PAD (ndig - 1, pdata->zero);
+		        }
+	         }
+	      else if (expt <= 0)
+	        {
+	          PRINT ("0", 1);
+	          if (expt || ndig || pdata->flags & ALT)
+		       {
+		         PRINT (decimal_point, decp_len);
+		         PAD (-expt, pdata->zero);
+		         PRINT (cp, ndig);
+		       }
+	         }
 	      else
-		/* __dtoa irregularity.  */
-		PAD (ndig - 1, pdata->zero);
+		    {
+		      char *convbuf = cp;
+		      PRINTANDPAD (cp, convbuf + ndig, pdata->lead, pdata->zero);
+		      cp += pdata->lead;
+		      if (expt < ndig || pdata->flags & ALT)
+			PRINT (decimal_point, decp_len);
+		      PRINTANDPAD (cp, convbuf + ndig, ndig - expt, pdata->zero);
+		    }
 	    }
-	  else			/* "XeYYY".  */
-	    PRINT (cp, 1);
-	  PRINT (pdata->expstr, expsize);
-	}
+       else
+	     {
+		  /* 'a', 'A', 'e', or 'E'.  */
+		  if (ndig > 1 || pdata->flags & ALT)
+		    {
+		      PRINT (cp, 1);
+		      cp++;
+		      PRINT (decimal_point, decp_len);
+		      if (_fpvalue)
+			    {
+			      PRINT (cp, ndig - 1);
+			    }
+		      /* "0.[0..]".  */
+		      else
+			  /* __dtoa irregularity.  */
+			    PAD (ndig - 1, pdata->zero);
+		    }
+		  else			/* "XeYYY".  */
+		    PRINT (cp, 1);
+		  PRINT (pdata->expstr, expsize);
+		 }
     }
 
   /* Left-adjusting padding (always blank).  */
