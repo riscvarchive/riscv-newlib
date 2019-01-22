@@ -53,8 +53,10 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
+@NEWLIB_FORMATTED_IO_TRUE@am__append_1 = $(lpfx)vfprintf_longdouble.$(oext)
 DIST_COMMON = $(srcdir)/../../Makefile.shared $(srcdir)/Makefile.in \
 	$(srcdir)/Makefile.am
+@NEWLIB_FORMATTED_IO_TRUE@am__append_2 = vfprintf_longdouble.def
 subdir = stdio
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/../../libtool.m4 \
@@ -71,22 +73,21 @@ CONFIG_CLEAN_VPATH_FILES =
 LIBRARIES = $(noinst_LIBRARIES)
 ARFLAGS = cru
 lib_a_AR = $(AR) $(ARFLAGS)
-@NEWLIB_NANO_FORMATTED_IO_FALSE@am__objects_1 =  \
-@NEWLIB_NANO_FORMATTED_IO_FALSE@	lib_a-fiprintf.$(OBJEXT) \
-@NEWLIB_NANO_FORMATTED_IO_FALSE@	lib_a-fiscanf.$(OBJEXT) \
-@NEWLIB_NANO_FORMATTED_IO_FALSE@	lib_a-iprintf.$(OBJEXT) \
-@NEWLIB_NANO_FORMATTED_IO_FALSE@	lib_a-iscanf.$(OBJEXT) \
-@NEWLIB_NANO_FORMATTED_IO_FALSE@	lib_a-siprintf.$(OBJEXT) \
-@NEWLIB_NANO_FORMATTED_IO_FALSE@	lib_a-siscanf.$(OBJEXT) \
-@NEWLIB_NANO_FORMATTED_IO_FALSE@	lib_a-sniprintf.$(OBJEXT) \
-@NEWLIB_NANO_FORMATTED_IO_FALSE@	lib_a-vdiprintf.$(OBJEXT) \
-@NEWLIB_NANO_FORMATTED_IO_FALSE@	lib_a-vfprintf.$(OBJEXT) \
-@NEWLIB_NANO_FORMATTED_IO_FALSE@	lib_a-vfwprintf.$(OBJEXT) \
-@NEWLIB_NANO_FORMATTED_IO_FALSE@	lib_a-viprintf.$(OBJEXT) \
-@NEWLIB_NANO_FORMATTED_IO_FALSE@	lib_a-viscanf.$(OBJEXT) \
-@NEWLIB_NANO_FORMATTED_IO_FALSE@	lib_a-vsiprintf.$(OBJEXT) \
-@NEWLIB_NANO_FORMATTED_IO_FALSE@	lib_a-vsiscanf.$(OBJEXT) \
-@NEWLIB_NANO_FORMATTED_IO_FALSE@	lib_a-vsniprintf.$(OBJEXT)
+@FORMATTED_IO_FALSE@am__objects_1 = lib_a-fiprintf.$(OBJEXT) \
+@FORMATTED_IO_FALSE@	lib_a-fiscanf.$(OBJEXT) \
+@FORMATTED_IO_FALSE@	lib_a-iprintf.$(OBJEXT) \
+@FORMATTED_IO_FALSE@	lib_a-iscanf.$(OBJEXT) \
+@FORMATTED_IO_FALSE@	lib_a-siprintf.$(OBJEXT) \
+@FORMATTED_IO_FALSE@	lib_a-siscanf.$(OBJEXT) \
+@FORMATTED_IO_FALSE@	lib_a-sniprintf.$(OBJEXT) \
+@FORMATTED_IO_FALSE@	lib_a-vdiprintf.$(OBJEXT) \
+@FORMATTED_IO_FALSE@	lib_a-vfprintf.$(OBJEXT) \
+@FORMATTED_IO_FALSE@	lib_a-vfwprintf.$(OBJEXT) \
+@FORMATTED_IO_FALSE@	lib_a-viprintf.$(OBJEXT) \
+@FORMATTED_IO_FALSE@	lib_a-viscanf.$(OBJEXT) \
+@FORMATTED_IO_FALSE@	lib_a-vsiprintf.$(OBJEXT) \
+@FORMATTED_IO_FALSE@	lib_a-vsiscanf.$(OBJEXT) \
+@FORMATTED_IO_FALSE@	lib_a-vsniprintf.$(OBJEXT)
 am__objects_2 = $(am__objects_1) lib_a-clearerr.$(OBJEXT) \
 	lib_a-fclose.$(OBJEXT) lib_a-fdopen.$(OBJEXT) \
 	lib_a-feof.$(OBJEXT) lib_a-ferror.$(OBJEXT) \
@@ -121,8 +122,8 @@ am__objects_2 = $(am__objects_1) lib_a-clearerr.$(OBJEXT) \
 	lib_a-vsnprintf.$(OBJEXT) lib_a-vsprintf.$(OBJEXT) \
 	lib_a-vsscanf.$(OBJEXT) lib_a-wbuf.$(OBJEXT) \
 	lib_a-wsetup.$(OBJEXT)
-@ELIX_LEVEL_1_FALSE@@NEWLIB_NANO_FORMATTED_IO_FALSE@am__objects_3 = lib_a-asiprintf.$(OBJEXT) \
-@ELIX_LEVEL_1_FALSE@@NEWLIB_NANO_FORMATTED_IO_FALSE@	lib_a-vasiprintf.$(OBJEXT)
+@ELIX_LEVEL_1_FALSE@@FORMATTED_IO_FALSE@am__objects_3 = lib_a-asiprintf.$(OBJEXT) \
+@ELIX_LEVEL_1_FALSE@@FORMATTED_IO_FALSE@	lib_a-vasiprintf.$(OBJEXT)
 @ELIX_LEVEL_1_FALSE@am__objects_4 = $(am__objects_3) \
 @ELIX_LEVEL_1_FALSE@	lib_a-asprintf.$(OBJEXT) \
 @ELIX_LEVEL_1_FALSE@	lib_a-fcloseall.$(OBJEXT) \
@@ -132,9 +133,9 @@ am__objects_2 = $(am__objects_1) lib_a-clearerr.$(OBJEXT) \
 @ELIX_LEVEL_1_FALSE@	lib_a-mktemp.$(OBJEXT) \
 @ELIX_LEVEL_1_FALSE@	lib_a-putw.$(OBJEXT) \
 @ELIX_LEVEL_1_FALSE@	lib_a-vasprintf.$(OBJEXT)
-@ELIX_LEVEL_1_FALSE@@ELIX_LEVEL_2_FALSE@@ELIX_LEVEL_3_FALSE@@NEWLIB_NANO_FORMATTED_IO_FALSE@am__objects_5 = lib_a-asniprintf.$(OBJEXT) \
-@ELIX_LEVEL_1_FALSE@@ELIX_LEVEL_2_FALSE@@ELIX_LEVEL_3_FALSE@@NEWLIB_NANO_FORMATTED_IO_FALSE@	lib_a-diprintf.$(OBJEXT) \
-@ELIX_LEVEL_1_FALSE@@ELIX_LEVEL_2_FALSE@@ELIX_LEVEL_3_FALSE@@NEWLIB_NANO_FORMATTED_IO_FALSE@	lib_a-vasniprintf.$(OBJEXT)
+@ELIX_LEVEL_1_FALSE@@ELIX_LEVEL_2_FALSE@@ELIX_LEVEL_3_FALSE@@FORMATTED_IO_FALSE@am__objects_5 = lib_a-asniprintf.$(OBJEXT) \
+@ELIX_LEVEL_1_FALSE@@ELIX_LEVEL_2_FALSE@@ELIX_LEVEL_3_FALSE@@FORMATTED_IO_FALSE@	lib_a-diprintf.$(OBJEXT) \
+@ELIX_LEVEL_1_FALSE@@ELIX_LEVEL_2_FALSE@@ELIX_LEVEL_3_FALSE@@FORMATTED_IO_FALSE@	lib_a-vasniprintf.$(OBJEXT)
 @ELIX_LEVEL_1_FALSE@@ELIX_LEVEL_2_FALSE@@ELIX_LEVEL_3_FALSE@am__objects_6 = $(am__objects_5) \
 @ELIX_LEVEL_1_FALSE@@ELIX_LEVEL_2_FALSE@@ELIX_LEVEL_3_FALSE@	lib_a-asnprintf.$(OBJEXT) \
 @ELIX_LEVEL_1_FALSE@@ELIX_LEVEL_2_FALSE@@ELIX_LEVEL_3_FALSE@	lib_a-clearerr_u.$(OBJEXT) \
@@ -189,14 +190,11 @@ am__objects_2 = $(am__objects_1) lib_a-clearerr.$(OBJEXT) \
 @USE_LIBTOOL_FALSE@	$(am__objects_4) $(am__objects_6)
 lib_a_OBJECTS = $(am_lib_a_OBJECTS)
 LTLIBRARIES = $(noinst_LTLIBRARIES)
-@NEWLIB_NANO_FORMATTED_IO_FALSE@am__objects_7 = fiprintf.lo fiscanf.lo \
-@NEWLIB_NANO_FORMATTED_IO_FALSE@	iprintf.lo iscanf.lo \
-@NEWLIB_NANO_FORMATTED_IO_FALSE@	siprintf.lo siscanf.lo \
-@NEWLIB_NANO_FORMATTED_IO_FALSE@	sniprintf.lo vdiprintf.lo \
-@NEWLIB_NANO_FORMATTED_IO_FALSE@	vfprintf.lo vfwprintf.lo \
-@NEWLIB_NANO_FORMATTED_IO_FALSE@	viprintf.lo viscanf.lo \
-@NEWLIB_NANO_FORMATTED_IO_FALSE@	vsiprintf.lo vsiscanf.lo \
-@NEWLIB_NANO_FORMATTED_IO_FALSE@	vsniprintf.lo
+@FORMATTED_IO_FALSE@am__objects_7 = fiprintf.lo fiscanf.lo iprintf.lo \
+@FORMATTED_IO_FALSE@	iscanf.lo siprintf.lo siscanf.lo \
+@FORMATTED_IO_FALSE@	sniprintf.lo vdiprintf.lo vfprintf.lo \
+@FORMATTED_IO_FALSE@	vfwprintf.lo viprintf.lo viscanf.lo \
+@FORMATTED_IO_FALSE@	vsiprintf.lo vsiscanf.lo vsniprintf.lo
 am__objects_8 = $(am__objects_7) clearerr.lo fclose.lo fdopen.lo \
 	feof.lo ferror.lo fflush.lo fgetc.lo fgetpos.lo fgets.lo \
 	fileno.lo findfp.lo flags.lo fopen.lo fprintf.lo fputc.lo \
@@ -210,14 +208,14 @@ am__objects_8 = $(am__objects_7) clearerr.lo fclose.lo fdopen.lo \
 	tmpfile.lo tmpnam.lo ungetc.lo vdprintf.lo vprintf.lo \
 	vscanf.lo vsnprintf.lo vsprintf.lo vsscanf.lo wbuf.lo \
 	wsetup.lo
-@ELIX_LEVEL_1_FALSE@@NEWLIB_NANO_FORMATTED_IO_FALSE@am__objects_9 = asiprintf.lo \
-@ELIX_LEVEL_1_FALSE@@NEWLIB_NANO_FORMATTED_IO_FALSE@	vasiprintf.lo
+@ELIX_LEVEL_1_FALSE@@FORMATTED_IO_FALSE@am__objects_9 = asiprintf.lo \
+@ELIX_LEVEL_1_FALSE@@FORMATTED_IO_FALSE@	vasiprintf.lo
 @ELIX_LEVEL_1_FALSE@am__objects_10 = $(am__objects_9) asprintf.lo \
 @ELIX_LEVEL_1_FALSE@	fcloseall.lo fseeko.lo ftello.lo getw.lo \
 @ELIX_LEVEL_1_FALSE@	mktemp.lo putw.lo vasprintf.lo
-@ELIX_LEVEL_1_FALSE@@ELIX_LEVEL_2_FALSE@@ELIX_LEVEL_3_FALSE@@NEWLIB_NANO_FORMATTED_IO_FALSE@am__objects_11 = asniprintf.lo \
-@ELIX_LEVEL_1_FALSE@@ELIX_LEVEL_2_FALSE@@ELIX_LEVEL_3_FALSE@@NEWLIB_NANO_FORMATTED_IO_FALSE@	diprintf.lo \
-@ELIX_LEVEL_1_FALSE@@ELIX_LEVEL_2_FALSE@@ELIX_LEVEL_3_FALSE@@NEWLIB_NANO_FORMATTED_IO_FALSE@	vasniprintf.lo
+@ELIX_LEVEL_1_FALSE@@ELIX_LEVEL_2_FALSE@@ELIX_LEVEL_3_FALSE@@FORMATTED_IO_FALSE@am__objects_11 = asniprintf.lo \
+@ELIX_LEVEL_1_FALSE@@ELIX_LEVEL_2_FALSE@@ELIX_LEVEL_3_FALSE@@FORMATTED_IO_FALSE@	diprintf.lo \
+@ELIX_LEVEL_1_FALSE@@ELIX_LEVEL_2_FALSE@@ELIX_LEVEL_3_FALSE@@FORMATTED_IO_FALSE@	vasniprintf.lo
 @ELIX_LEVEL_1_FALSE@@ELIX_LEVEL_2_FALSE@@ELIX_LEVEL_3_FALSE@am__objects_12 = $(am__objects_11) \
 @ELIX_LEVEL_1_FALSE@@ELIX_LEVEL_2_FALSE@@ELIX_LEVEL_3_FALSE@	asnprintf.lo \
 @ELIX_LEVEL_1_FALSE@@ELIX_LEVEL_2_FALSE@@ELIX_LEVEL_3_FALSE@	clearerr_u.lo \
@@ -430,6 +428,7 @@ pdfdir = @pdfdir@
 prefix = @prefix@
 program_transform_name = @program_transform_name@
 psdir = @psdir@
+runstatedir = @runstatedir@
 sbindir = @sbindir@
 sharedstatedir = @sharedstatedir@
 srcdir = @srcdir@
@@ -442,24 +441,24 @@ top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 AUTOMAKE_OPTIONS = cygnus
 INCLUDES = $(NEWLIB_CFLAGS) $(CROSS_CFLAGS) $(TARGET_CFLAGS)
-@NEWLIB_NANO_FORMATTED_IO_FALSE@GENERAL_INT_FORMATTED_IO_SOURCES = \
-@NEWLIB_NANO_FORMATTED_IO_FALSE@	fiprintf.c			\
-@NEWLIB_NANO_FORMATTED_IO_FALSE@	fiscanf.c			\
-@NEWLIB_NANO_FORMATTED_IO_FALSE@	iprintf.c			\
-@NEWLIB_NANO_FORMATTED_IO_FALSE@	iscanf.c			\
-@NEWLIB_NANO_FORMATTED_IO_FALSE@	siprintf.c			\
-@NEWLIB_NANO_FORMATTED_IO_FALSE@	siscanf.c			\
-@NEWLIB_NANO_FORMATTED_IO_FALSE@	sniprintf.c			\
-@NEWLIB_NANO_FORMATTED_IO_FALSE@	vdiprintf.c			\
-@NEWLIB_NANO_FORMATTED_IO_FALSE@	vfprintf.c			\
-@NEWLIB_NANO_FORMATTED_IO_FALSE@	vfwprintf.c			\
-@NEWLIB_NANO_FORMATTED_IO_FALSE@	viprintf.c			\
-@NEWLIB_NANO_FORMATTED_IO_FALSE@	viscanf.c			\
-@NEWLIB_NANO_FORMATTED_IO_FALSE@	vsiprintf.c			\
-@NEWLIB_NANO_FORMATTED_IO_FALSE@	vsiscanf.c			\
-@NEWLIB_NANO_FORMATTED_IO_FALSE@	vsniprintf.c
+@FORMATTED_IO_FALSE@GENERAL_INT_FORMATTED_IO_SOURCES = \
+@FORMATTED_IO_FALSE@	fiprintf.c			\
+@FORMATTED_IO_FALSE@	fiscanf.c			\
+@FORMATTED_IO_FALSE@	iprintf.c			\
+@FORMATTED_IO_FALSE@	iscanf.c			\
+@FORMATTED_IO_FALSE@	siprintf.c			\
+@FORMATTED_IO_FALSE@	siscanf.c			\
+@FORMATTED_IO_FALSE@	sniprintf.c			\
+@FORMATTED_IO_FALSE@	vdiprintf.c			\
+@FORMATTED_IO_FALSE@	vfprintf.c			\
+@FORMATTED_IO_FALSE@	vfwprintf.c			\
+@FORMATTED_IO_FALSE@	viprintf.c			\
+@FORMATTED_IO_FALSE@	viscanf.c			\
+@FORMATTED_IO_FALSE@	vsiprintf.c			\
+@FORMATTED_IO_FALSE@	vsiscanf.c			\
+@FORMATTED_IO_FALSE@	vsniprintf.c
 
-@NEWLIB_NANO_FORMATTED_IO_TRUE@GENERAL_INT_FORMATTED_IO_SOURCES = 
+@FORMATTED_IO_TRUE@GENERAL_INT_FORMATTED_IO_SOURCES = 
 GENERAL_SOURCES = \
 	$(GENERAL_INT_FORMATTED_IO_SOURCES) \
 	clearerr.c			\
@@ -541,11 +540,11 @@ GENERAL_SOURCES = \
 @ELIX_LEVEL_1_FALSE@	vasprintf.c
 
 @ELIX_LEVEL_1_TRUE@ELIX_2_SOURCES = 
-@ELIX_LEVEL_1_FALSE@@NEWLIB_NANO_FORMATTED_IO_FALSE@ELIX_2_INT_FORMATTED_IO_SOURCES = \
-@ELIX_LEVEL_1_FALSE@@NEWLIB_NANO_FORMATTED_IO_FALSE@	asiprintf.c		\
-@ELIX_LEVEL_1_FALSE@@NEWLIB_NANO_FORMATTED_IO_FALSE@	vasiprintf.c
+@ELIX_LEVEL_1_FALSE@@FORMATTED_IO_FALSE@ELIX_2_INT_FORMATTED_IO_SOURCES = \
+@ELIX_LEVEL_1_FALSE@@FORMATTED_IO_FALSE@	asiprintf.c		\
+@ELIX_LEVEL_1_FALSE@@FORMATTED_IO_FALSE@	vasiprintf.c
 
-@ELIX_LEVEL_1_FALSE@@NEWLIB_NANO_FORMATTED_IO_TRUE@ELIX_2_INT_FORMATTED_IO_SOURCES = 
+@ELIX_LEVEL_1_FALSE@@FORMATTED_IO_TRUE@ELIX_2_INT_FORMATTED_IO_SOURCES = 
 @ELIX_LEVEL_1_FALSE@@ELIX_LEVEL_2_FALSE@@ELIX_LEVEL_3_FALSE@ELIX_4_SOURCES = \
 @ELIX_LEVEL_1_FALSE@@ELIX_LEVEL_2_FALSE@@ELIX_LEVEL_3_FALSE@	$(ELIX_4_INT_FORMATTED_IO_SOURCES) \
 @ELIX_LEVEL_1_FALSE@@ELIX_LEVEL_2_FALSE@@ELIX_LEVEL_3_FALSE@	asnprintf.c		\
@@ -601,39 +600,41 @@ GENERAL_SOURCES = \
 @ELIX_LEVEL_1_FALSE@@ELIX_LEVEL_2_FALSE@@ELIX_LEVEL_3_TRUE@ELIX_4_SOURCES = 
 @ELIX_LEVEL_1_FALSE@@ELIX_LEVEL_2_TRUE@ELIX_4_SOURCES = 
 @ELIX_LEVEL_1_TRUE@ELIX_4_SOURCES = 
-@ELIX_LEVEL_1_FALSE@@ELIX_LEVEL_2_FALSE@@ELIX_LEVEL_3_FALSE@@NEWLIB_NANO_FORMATTED_IO_FALSE@ELIX_4_INT_FORMATTED_IO_SOURCES = \
-@ELIX_LEVEL_1_FALSE@@ELIX_LEVEL_2_FALSE@@ELIX_LEVEL_3_FALSE@@NEWLIB_NANO_FORMATTED_IO_FALSE@	asniprintf.c		\
-@ELIX_LEVEL_1_FALSE@@ELIX_LEVEL_2_FALSE@@ELIX_LEVEL_3_FALSE@@NEWLIB_NANO_FORMATTED_IO_FALSE@	diprintf.c		\
-@ELIX_LEVEL_1_FALSE@@ELIX_LEVEL_2_FALSE@@ELIX_LEVEL_3_FALSE@@NEWLIB_NANO_FORMATTED_IO_FALSE@	vasniprintf.c
+@ELIX_LEVEL_1_FALSE@@ELIX_LEVEL_2_FALSE@@ELIX_LEVEL_3_FALSE@@FORMATTED_IO_FALSE@ELIX_4_INT_FORMATTED_IO_SOURCES = \
+@ELIX_LEVEL_1_FALSE@@ELIX_LEVEL_2_FALSE@@ELIX_LEVEL_3_FALSE@@FORMATTED_IO_FALSE@	asniprintf.c		\
+@ELIX_LEVEL_1_FALSE@@ELIX_LEVEL_2_FALSE@@ELIX_LEVEL_3_FALSE@@FORMATTED_IO_FALSE@	diprintf.c		\
+@ELIX_LEVEL_1_FALSE@@ELIX_LEVEL_2_FALSE@@ELIX_LEVEL_3_FALSE@@FORMATTED_IO_FALSE@	vasniprintf.c
 
-@ELIX_LEVEL_1_FALSE@@ELIX_LEVEL_2_FALSE@@ELIX_LEVEL_3_FALSE@@NEWLIB_NANO_FORMATTED_IO_TRUE@ELIX_4_INT_FORMATTED_IO_SOURCES = 
-@NEWLIB_NANO_FORMATTED_IO_FALSE@LIBADD_OBJS = \
-@NEWLIB_NANO_FORMATTED_IO_FALSE@	$(lpfx)svfiprintf.$(oext) $(lpfx)svfprintf.$(oext) \
-@NEWLIB_NANO_FORMATTED_IO_FALSE@	$(lpfx)svfiscanf.$(oext) $(lpfx)svfscanf.$(oext) \
-@NEWLIB_NANO_FORMATTED_IO_FALSE@	$(lpfx)vfiprintf.$(oext) \
-@NEWLIB_NANO_FORMATTED_IO_FALSE@	$(lpfx)vfscanf.$(oext) $(lpfx)vfiscanf.$(oext) \
-@NEWLIB_NANO_FORMATTED_IO_FALSE@	$(lpfx)svfiwprintf.$(oext) $(lpfx)svfwprintf.$(oext) \
-@NEWLIB_NANO_FORMATTED_IO_FALSE@	$(lpfx)vfiwprintf.$(oext) \
-@NEWLIB_NANO_FORMATTED_IO_FALSE@	$(lpfx)svfiwscanf.$(oext) $(lpfx)svfwscanf.$(oext) \
-@NEWLIB_NANO_FORMATTED_IO_FALSE@	$(lpfx)vfiwscanf.$(oext) $(lpfx)vfwscanf.$(oext)
-
-@NEWLIB_NANO_FORMATTED_IO_TRUE@LIBADD_OBJS = \
-@NEWLIB_NANO_FORMATTED_IO_TRUE@	$(lpfx)nano-vfprintf_float.$(oext)	\
-@NEWLIB_NANO_FORMATTED_IO_TRUE@	$(lpfx)nano-svfprintf.$(oext)		\
-@NEWLIB_NANO_FORMATTED_IO_TRUE@	$(lpfx)nano-svfscanf.$(oext)		\
-@NEWLIB_NANO_FORMATTED_IO_TRUE@	$(lpfx)nano-vfprintf.$(oext)		\
-@NEWLIB_NANO_FORMATTED_IO_TRUE@	$(lpfx)nano-vfprintf_i.$(oext)		\
-@NEWLIB_NANO_FORMATTED_IO_TRUE@	$(lpfx)nano-vfscanf.$(oext)		\
-@NEWLIB_NANO_FORMATTED_IO_TRUE@	$(lpfx)nano-vfscanf_i.$(oext)		\
-@NEWLIB_NANO_FORMATTED_IO_TRUE@	$(lpfx)nano-vfscanf_float.$(oext)	\
-@NEWLIB_NANO_FORMATTED_IO_TRUE@	$(lpfx)svfiwprintf.$(oext)		\
-@NEWLIB_NANO_FORMATTED_IO_TRUE@	$(lpfx)svfwprintf.$(oext)		\
-@NEWLIB_NANO_FORMATTED_IO_TRUE@	$(lpfx)vfiwprintf.$(oext)		\
-@NEWLIB_NANO_FORMATTED_IO_TRUE@	$(lpfx)svfiwscanf.$(oext)		\
-@NEWLIB_NANO_FORMATTED_IO_TRUE@	$(lpfx)svfwscanf.$(oext)		\
-@NEWLIB_NANO_FORMATTED_IO_TRUE@	$(lpfx)vfiwscanf.$(oext)		\
-@NEWLIB_NANO_FORMATTED_IO_TRUE@	$(lpfx)vfwscanf.$(oext)
-
+@ELIX_LEVEL_1_FALSE@@ELIX_LEVEL_2_FALSE@@ELIX_LEVEL_3_FALSE@@FORMATTED_IO_TRUE@ELIX_4_INT_FORMATTED_IO_SOURCES = 
+@FORMATTED_IO_FALSE@LIBADD_OBJS = $(lpfx)svfiprintf.$(oext) \
+@FORMATTED_IO_FALSE@	$(lpfx)svfprintf.$(oext) \
+@FORMATTED_IO_FALSE@	$(lpfx)svfiscanf.$(oext) \
+@FORMATTED_IO_FALSE@	$(lpfx)svfscanf.$(oext) \
+@FORMATTED_IO_FALSE@	$(lpfx)vfiprintf.$(oext) \
+@FORMATTED_IO_FALSE@	$(lpfx)vfscanf.$(oext) \
+@FORMATTED_IO_FALSE@	$(lpfx)vfiscanf.$(oext) \
+@FORMATTED_IO_FALSE@	$(lpfx)svfiwprintf.$(oext) \
+@FORMATTED_IO_FALSE@	$(lpfx)svfwprintf.$(oext) \
+@FORMATTED_IO_FALSE@	$(lpfx)vfiwprintf.$(oext) \
+@FORMATTED_IO_FALSE@	$(lpfx)svfiwscanf.$(oext) \
+@FORMATTED_IO_FALSE@	$(lpfx)svfwscanf.$(oext) \
+@FORMATTED_IO_FALSE@	$(lpfx)vfiwscanf.$(oext) \
+@FORMATTED_IO_FALSE@	$(lpfx)vfwscanf.$(oext) $(am__append_1)
+@FORMATTED_IO_TRUE@LIBADD_OBJS = $(lpfx)nano-vfprintf_float.$(oext) \
+@FORMATTED_IO_TRUE@	$(lpfx)nano-svfprintf.$(oext) \
+@FORMATTED_IO_TRUE@	$(lpfx)nano-svfscanf.$(oext) \
+@FORMATTED_IO_TRUE@	$(lpfx)nano-vfprintf.$(oext) \
+@FORMATTED_IO_TRUE@	$(lpfx)nano-vfprintf_i.$(oext) \
+@FORMATTED_IO_TRUE@	$(lpfx)nano-vfscanf.$(oext) \
+@FORMATTED_IO_TRUE@	$(lpfx)nano-vfscanf_i.$(oext) \
+@FORMATTED_IO_TRUE@	$(lpfx)nano-vfscanf_float.$(oext) \
+@FORMATTED_IO_TRUE@	$(lpfx)svfiwprintf.$(oext) \
+@FORMATTED_IO_TRUE@	$(lpfx)svfwprintf.$(oext) \
+@FORMATTED_IO_TRUE@	$(lpfx)vfiwprintf.$(oext) \
+@FORMATTED_IO_TRUE@	$(lpfx)svfiwscanf.$(oext) \
+@FORMATTED_IO_TRUE@	$(lpfx)svfwscanf.$(oext) \
+@FORMATTED_IO_TRUE@	$(lpfx)vfiwscanf.$(oext) \
+@FORMATTED_IO_TRUE@	$(lpfx)vfwscanf.$(oext) $(am__append_1)
 libstdio_la_LDFLAGS = -Xcompiler -nostdlib
 @USE_LIBTOOL_TRUE@noinst_LTLIBRARIES = libstdio.la
 @USE_LIBTOOL_TRUE@libstdio_la_SOURCES = $(GENERAL_SOURCES) $(ELIX_2_SOURCES) $(ELIX_4_SOURCES)
@@ -658,23 +659,14 @@ DOCBOOK_CHEW = ${top_srcdir}/../doc/makedocbook.py
 DOCBOOK_OUT_FILES = $(CHEWOUT_FILES:.def=.xml)
 DOCBOOK_CHAPTERS = $(CHAPTERS:.tex=.xml)
 CLEANFILES = $(CHEWOUT_FILES) $(DOCBOOK_OUT_FILES)
-@NEWLIB_NANO_FORMATTED_IO_FALSE@CHEWOUT_INT_FORMATTED_IO_FILES = \
-@NEWLIB_NANO_FORMATTED_IO_FALSE@	diprintf.def		\
-@NEWLIB_NANO_FORMATTED_IO_FALSE@	siprintf.def		\
-@NEWLIB_NANO_FORMATTED_IO_FALSE@	siscanf.def		\
-@NEWLIB_NANO_FORMATTED_IO_FALSE@	vfprintf.def		\
-@NEWLIB_NANO_FORMATTED_IO_FALSE@	vfscanf.def		\
-@NEWLIB_NANO_FORMATTED_IO_FALSE@	viprintf.def		\
-@NEWLIB_NANO_FORMATTED_IO_FALSE@	viscanf.def
-
-@NEWLIB_NANO_FORMATTED_IO_TRUE@CHEWOUT_INT_FORMATTED_IO_FILES = \
-@NEWLIB_NANO_FORMATTED_IO_TRUE@	nano-vfprintf.def	\
-@NEWLIB_NANO_FORMATTED_IO_TRUE@	nano-vfprintf_i.def	\
-@NEWLIB_NANO_FORMATTED_IO_TRUE@	nano-vfprintf_float.def	\
-@NEWLIB_NANO_FORMATTED_IO_TRUE@	nano-vfscanf.def	\
-@NEWLIB_NANO_FORMATTED_IO_TRUE@	nano-vfscanf_i.def	\
-@NEWLIB_NANO_FORMATTED_IO_TRUE@	nano-vfscanf_float.def
-
+@FORMATTED_IO_FALSE@CHEWOUT_INT_FORMATTED_IO_FILES = diprintf.def \
+@FORMATTED_IO_FALSE@	siprintf.def siscanf.def vfprintf.def \
+@FORMATTED_IO_FALSE@	vfscanf.def viprintf.def viscanf.def \
+@FORMATTED_IO_FALSE@	$(am__append_2)
+@FORMATTED_IO_TRUE@CHEWOUT_INT_FORMATTED_IO_FILES = nano-vfprintf.def \
+@FORMATTED_IO_TRUE@	nano-vfprintf_i.def nano-vfprintf_float.def \
+@FORMATTED_IO_TRUE@	nano-vfscanf.def nano-vfscanf_i.def \
+@FORMATTED_IO_TRUE@	nano-vfscanf_float.def $(am__append_2)
 CHEWOUT_FILES = \
 	$(CHEWOUT_INT_FORMATTED_IO_FILES)	\
 	clearerr.def		\
@@ -1888,17 +1880,23 @@ docbook: $(DOCBOOK_OUT_FILES)
 # library, because they are not depended on by final makefile target.
 
 # Rules compiling small-footprint nano-formatted-io implementation.
-@NEWLIB_NANO_FORMATTED_IO_TRUE@$(lpfx)nano-vfprintf.$(oext): nano-vfprintf.c
-@NEWLIB_NANO_FORMATTED_IO_TRUE@	$(LIB_COMPILE) -c $(srcdir)/nano-vfprintf.c -o $@
+@FORMATTED_IO_TRUE@$(lpfx)nano-vfprintf_i.$(oext): nano-vfprintf_i.c
+@FORMATTED_IO_TRUE@	$(LIB_COMPILE) -c $(srcdir)/nano-vfprintf_i.c -o $@
 
-@NEWLIB_NANO_FORMATTED_IO_TRUE@$(lpfx)nano-vfprintf_i.$(oext): nano-vfprintf_i.c
-@NEWLIB_NANO_FORMATTED_IO_TRUE@	$(LIB_COMPILE) -c $(srcdir)/nano-vfprintf_i.c -o $@
+@FORMATTED_IO_TRUE@$(lpfx)nano-svfprintf.$(oext): nano-vfprintf.c
+@FORMATTED_IO_TRUE@	$(LIB_COMPILE) -DSTRING_ONLY -c $(srcdir)/nano-vfprintf.c -o $@
+
+@NEWLIB_FORMATTED_IO_TRUE@$(lpfx)vfprintf_longdouble.$(oext): vfprintf_longdouble.c
+@NEWLIB_FORMATTED_IO_TRUE@	$(LIB_COMPILE) -D_WANT_IO_LONG_DOUBLE -c $(srcdir)/vfprintf_longdouble.c -o $@
+@NEWLIB_FORMATTED_IO_TRUE@$(lpfx)nano-vfprintf_float.$(oext): nano-vfprintf_float.c
+@NEWLIB_FORMATTED_IO_TRUE@	$(LIB_COMPILE) -D_WANT_IO_LONG_DOUBLE -c $(srcdir)/nano-vfprintf_float.c -o $@
+@NEWLIB_FORMATTED_IO_TRUE@$(lpfx)nano-vfprintf.$(oext): nano-vfprintf.c
+@NEWLIB_FORMATTED_IO_TRUE@	$(LIB_COMPILE) -DNEWLIB_FORMATTED_IO -c $(srcdir)/nano-vfprintf.c -o $@
 
 @NEWLIB_NANO_FORMATTED_IO_TRUE@$(lpfx)nano-vfprintf_float.$(oext): nano-vfprintf_float.c
 @NEWLIB_NANO_FORMATTED_IO_TRUE@	$(LIB_COMPILE) -c $(srcdir)/nano-vfprintf_float.c -o $@
-
-@NEWLIB_NANO_FORMATTED_IO_TRUE@$(lpfx)nano-svfprintf.$(oext): nano-vfprintf.c
-@NEWLIB_NANO_FORMATTED_IO_TRUE@	$(LIB_COMPILE) -DSTRING_ONLY -c $(srcdir)/nano-vfprintf.c -o $@
+@NEWLIB_NANO_FORMATTED_IO_TRUE@$(lpfx)nano-vfprintf.$(oext): nano-vfprintf.c
+@NEWLIB_NANO_FORMATTED_IO_TRUE@	$(LIB_COMPILE) -c $(srcdir)/nano-vfprintf.c -o $@
 
 # This rule is needed so that libtool compiles vfiprintf before vfprintf.
 # Otherwise libtool moves vfprintf.o and subsequently can't find it.
@@ -1922,17 +1920,17 @@ $(lpfx)svfiwprintf.$(oext): vfwprintf.c
 	$(LIB_COMPILE) -DINTEGER_ONLY -DSTRING_ONLY -c $(srcdir)/vfwprintf.c -o $@
 
 # Rules compiling small-footprint nano-formatted-io implementation.
-@NEWLIB_NANO_FORMATTED_IO_TRUE@$(lpfx)nano-vfscanf.$(oext): nano-vfscanf.c
-@NEWLIB_NANO_FORMATTED_IO_TRUE@	$(LIB_COMPILE) -c $(srcdir)/nano-vfscanf.c -o $@
+@FORMATTED_IO_TRUE@$(lpfx)nano-vfscanf.$(oext): nano-vfscanf.c
+@FORMATTED_IO_TRUE@	$(LIB_COMPILE) -c $(srcdir)/nano-vfscanf.c -o $@
 
-@NEWLIB_NANO_FORMATTED_IO_TRUE@$(lpfx)nano-vfscanf_i.$(oext): nano-vfscanf_i.c
-@NEWLIB_NANO_FORMATTED_IO_TRUE@	$(LIB_COMPILE) -c $(srcdir)/nano-vfscanf_i.c -o $@
+@FORMATTED_IO_TRUE@$(lpfx)nano-vfscanf_i.$(oext): nano-vfscanf_i.c
+@FORMATTED_IO_TRUE@	$(LIB_COMPILE) -c $(srcdir)/nano-vfscanf_i.c -o $@
 
-@NEWLIB_NANO_FORMATTED_IO_TRUE@$(lpfx)nano-vfscanf_float.$(oext): nano-vfscanf_float.c
-@NEWLIB_NANO_FORMATTED_IO_TRUE@	$(LIB_COMPILE) -c $(srcdir)/nano-vfscanf_float.c -o $@
+@FORMATTED_IO_TRUE@$(lpfx)nano-vfscanf_float.$(oext): nano-vfscanf_float.c
+@FORMATTED_IO_TRUE@	$(LIB_COMPILE) -c $(srcdir)/nano-vfscanf_float.c -o $@
 
-@NEWLIB_NANO_FORMATTED_IO_TRUE@$(lpfx)nano-svfscanf.$(oext): nano-vfscanf.c
-@NEWLIB_NANO_FORMATTED_IO_TRUE@	$(LIB_COMPILE) -DSTRING_ONLY -c $(srcdir)/nano-vfscanf.c -o $@
+@FORMATTED_IO_TRUE@$(lpfx)nano-svfscanf.$(oext): nano-vfscanf.c
+@FORMATTED_IO_TRUE@	$(LIB_COMPILE) -DSTRING_ONLY -c $(srcdir)/nano-vfscanf.c -o $@
 
 $(lpfx)vfscanf.$(oext): vfscanf.c
 	$(LIB_COMPILE) -c $(srcdir)/vfscanf.c -o $@
@@ -2027,8 +2025,8 @@ $(lpfx)sniprintf.$(oext): local.h
 $(lpfx)sprintf.$(oext): local.h
 $(lpfx)sscanf.$(oext): local.h
 $(lpfx)stdio.$(oext): local.h
-@NEWLIB_NANO_FORMATTED_IO_TRUE@$(lpfx)nano-svfprintf.$(oext): local.h nano-vfprintf_local.h
-@NEWLIB_NANO_FORMATTED_IO_TRUE@$(lpfx)nano-svfscanf.$(oext): local.h nano-vfscanf_local.h
+@FORMATTED_IO_TRUE@$(lpfx)nano-svfprintf.$(oext): local.h nano-vfprintf_local.h
+@FORMATTED_IO_TRUE@$(lpfx)nano-svfscanf.$(oext): local.h nano-vfscanf_local.h
 $(lpfx)svfiprintf.$(oext): local.h
 $(lpfx)svfiscanf.$(oext): local.h floatio.h
 $(lpfx)svfprintf.$(oext): local.h
@@ -2037,12 +2035,13 @@ $(lpfx)swprintf.$(oext): local.h
 $(lpfx)swscanf.$(oext): local.h
 $(lpfx)ungetc.$(oext): local.h
 $(lpfx)ungetwc.$(oext): local.h
-@NEWLIB_NANO_FORMATTED_IO_TRUE@$(lpfx)nano-vfprintf.$(oext): local.h nano-vfprintf_local.h
-@NEWLIB_NANO_FORMATTED_IO_TRUE@$(lpfx)nano-vfprintf_i.$(oext): local.h nano-vfprintf_local.h
-@NEWLIB_NANO_FORMATTED_IO_TRUE@$(lpfx)nano-vfprintf_float.$(oext): local.h floatio.h nano-vfprintf_local.h
-@NEWLIB_NANO_FORMATTED_IO_TRUE@$(lpfx)nano-vfscanf.$(oext): local.h nano-vfscanf_local.h
-@NEWLIB_NANO_FORMATTED_IO_TRUE@$(lpfx)nano-vfscanf_i.$(oext): local.h nano-vfscanf_local.h
-@NEWLIB_NANO_FORMATTED_IO_TRUE@$(lpfx)nano-vfscanf_float.$(oext): local.h floatio.h nano-vfscanf_local.h
+@FORMATTED_IO_TRUE@$(lpfx)nano-vfprintf.$(oext): local.h nano-vfprintf_local.h
+@FORMATTED_IO_TRUE@$(lpfx)nano-vfprintf_i.$(oext): local.h nano-vfprintf_local.h
+@FORMATTED_IO_TRUE@$(lpfx)nano-vfprintf_float.$(oext): local.h floatio.h nano-vfprintf_local.h
+@FORMATTED_IO_TRUE@$(lpfx)nano-vfscanf.$(oext): local.h nano-vfscanf_local.h
+@FORMATTED_IO_TRUE@$(lpfx)nano-vfscanf_i.$(oext): local.h nano-vfscanf_local.h
+@FORMATTED_IO_TRUE@$(lpfx)nano-vfscanf_float.$(oext): local.h floatio.h nano-vfscanf_local.h
+@NEWLIB_FORMATTED_IO_TRUE@$(lpfx)vfprintf_longdouble.$(oext): local.h nano-vfprintf_local.h
 $(lpfx)vfiprintf.$(oext): local.h
 $(lpfx)vfiscanf.$(oext): local.h floatio.h
 $(lpfx)vfprintf.$(oext): local.h

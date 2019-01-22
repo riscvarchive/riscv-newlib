@@ -75,6 +75,10 @@
 
 #define _NO_LONGLONG
 
+#if defined _WANT_IO_LONG_DOUBLE && (LDBL_MANT_DIG > DBL_MANT_DIG)
+#undef _NO_LONGDBL
+#endif
+
 #define _PRINTF_FLOAT_TYPE double
 
 #if defined (FLOATING_POINT)
@@ -215,7 +219,7 @@ _printf_common (struct _reent *data,
 		int *realsz,
 		FILE *fp,
 		int (*pfunc)(struct _reent *, FILE *,
-			     const char *, size_t len));
+	        const char *, size_t len));
 
 extern int
 _printf_i (struct _reent *data, struct _prt_data_t *pdata, FILE *fp,
@@ -224,11 +228,28 @@ _printf_i (struct _reent *data, struct _prt_data_t *pdata, FILE *fp,
 
 /* Make _printf_float weak symbol, so it won't be linked in if target program
    does not need it.  */
+#ifdef  NEWLIB_NANO_FORMATTED_IO
 extern int
 _printf_float (struct _reent *data,
 	       struct _prt_data_t *pdata,
 	       FILE *fp,
 	       int (*pfunc)(struct _reent *, FILE *,
-			    const char *, size_t len),
+               const char *, size_t len),
 	       va_list *ap) _ATTRIBUTE((__weak__));
+#else
+extern int
+_printf_float (struct _reent *data,
+	       struct _prt_data_t *pdata,
+	       FILE *fp,
+	       int (*pfunc)(struct _reent *, FILE *,
+               const char *, size_t len),
+	       va_list *ap);
+extern int
+_printf_longdouble (struct _reent *data,
+	       struct _prt_data_t *pdata,
+	       FILE *fp,
+	       int (*pfunc)(struct _reent *, FILE *,
+	       const char *, size_t len),
+	       va_list *ap) _ATTRIBUTE((__weak__));
+#endif /*NEWLIB_NANO_FORMATTED_IO */
 #endif

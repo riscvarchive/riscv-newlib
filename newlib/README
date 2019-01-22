@@ -457,6 +457,21 @@ One feature can be enabled by specifying `--enable-FEATURE=yes' or
 
      Disabled by default.
 
+`--enable-newlib-formatted-io'
+     This builds NEWLIB with a special implementation of formatted printf
+     function, designed to lower the size of application on small systems
+     with size constraint issues.  This option does not affect wide-char
+     formatted I/O functions. 
+     Floating-point printf support for long double is split
+     out of the formatted printf code into weak function which is not linked
+     by default.  Programs that need long double printf support must explicitly
+     request linking of function _printf_longdouble. This can be done at link
+     time using the -u option which can be passed to either gcc or ld. The -u
+     option forces the linker to resolve the function reference.If -u option
+     is unspecified then it may result in undefined behavior of programs that need
+     floating-point long double printf support.
+     Disabled by default.
+
 Running the Testsuite
 =====================
 

@@ -227,6 +227,17 @@ AC_ARG_ENABLE(newlib_nano_formatted_io,
    *) AC_MSG_ERROR(bad value ${enableval} for newlib-nano-formatted-io) ;;
  esac],[newlib_nano_formatted_io=no])
 
+dnl Support --enable-newlib-formatted-io
+dnl This option is also read in libc/configure.in.  It is repeated
+dnl here so that it shows up in the help text.
+AC_ARG_ENABLE(newlib_formatted_io,
+[  --enable-newlib-formatted-io    Use newlib version formatted IO],
+[case "${enableval}" in
+   yes) newlib_formatted_io=yes ;;
+   no)  newlib_formatted_io=no ;;
+   *) AC_MSG_ERROR(bad value ${enableval} for newlib-formatted-io) ;;
+ esac],[newlib_formatted_io=no])
+
 dnl Support --enable-retargetable-locking
 dnl This option is also read in libc/configure.in.  It is repeated
 dnl here so that it shows up in the help text.

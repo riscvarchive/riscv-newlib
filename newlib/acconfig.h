@@ -76,6 +76,9 @@
 /* Define if nano version formatted IO is used.  */
 #undef _NANO_FORMATTED_IO
 
+/* Define if newlib version formatted IO is used.  */
+#undef _NEWLIB_FORMATTED_IO
+
 @BOTTOM@
 /*
  * Iconv encodings enabled ("to" direction)

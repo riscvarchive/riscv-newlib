@@ -1,3 +1,43 @@
+2019-01-22  Deepa B  <deepa.ballari@algochips.com>
+
+	* newlib/README : Info added on --enable-newlib-formatted-io
+	* newlib/acconfig.h : _NEWLIB_FORMATTED_IO undefined
+	* newlib/configure : Regenerate
+	* newlib/configure.in : Option --enable-newlib-formatted-io added
+	* newlib/libc/Makefile.in : Regenerate
+	* newlib/libc/argz/Makefile.in : Regenerate
+	* newlib/libc/configure : Regenerate
+	* newlib/libc/configure.in : Option --enable-newlib-formatted-io added, conditional macro FORMATTED_IO added
+	* newlib/libc/ctype/Makefile.in : Regenerate
+	* newlib/libc/errno/Makefile.in : Regenerate
+	* newlib/libc/iconv/Makefile.in : Regenerate
+	* newlib/libc/iconv/ccs/Makefile.in : Regenerate
+	* newlib/libc/iconv/ccs/binary/Makefile.in : Regenerate
+	* newlib/libc/iconv/ces/Makefile.in : Regenerate
+	* newlib/libc/iconv/lib/Makefile.in : Regenerate
+	* newlib/libc/locale/Makefile.in : Regenerate
+	* newlib/libc/misc/Makefile.in : Regenerate
+	* newlib/libc/posix/Makefile.in : Regenerate
+	* newlib/libc/reent/Makefile.in : Regenerate
+	* newlib/libc/search/Makefile.in : Regenerate
+	* newlib/libc/signal/Makefile.in : Regenerate
+	* newlib/libc/ssp/Makefile.in : Regenerate
+	* newlib/libc/stdio/Makefile.am : Added source targets for newlib formatted printf.FORMATTED_IO is true when either --enable-newlib-formatted-io or 
+	--enable-newlib-nano-formatted-io is true
+	* newlib/libc/stdio/Makefile.in : Regenerate
+	* newlib/libc/stdio/nano-vfprintf.c : Newlib formatted printf code added to invoke float and long double
+	* newlib/libc/stdio/nano-vfprintf_float.c : __cvt updated to handle long double
+	* newlib/libc/stdio/nano-vfprintf_local.h : _printf_float() declared weak for NEWLIB_NANO_FORMATTED_IO._printf_longdouble() declared weak for NEWLIB_FORMATTED_IO
+	* newlib/libc/stdio/vfprintf_longdouble.c : New file added.Long double code added in _printf_longdouble().
+	* newlib/libc/stdio64/Makefile.in : Regenerate
+	* newlib/libc/stdlib/Makefile.in : Regenerate
+	* newlib/libc/string/Makefile.in : Regenerate
+	* newlib/libc/syscalls/Makefile.in : Regenerate
+	* newlib/libc/time/Makefile.in : Regenerate
+	* newlib/libc/unix/Makefile.in : Regenerate
+	* newlib/libc/xdr/Makefile.in : Regenerate
+	* newlib/newlib.hin b/newlib/newlib.hin : _NEWLIB_FORMATTED_IO undefined
+
 2016-06-23  Jeff Johnston  <jjohnstn@redhat.com>
 
 	* Sync toplevel with upstream GCC.

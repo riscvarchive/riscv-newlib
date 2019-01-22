@@ -69,6 +69,8 @@ __cvt (struct _reent *data, _PRINTF_FLOAT_TYPE value, int ndigits, int flags,
 {
   int mode, dsgn;
   char *digits, *bp, *rve;
+
+#ifdef _NO_LONGDBL
   union double_union tmp;
 
   tmp.d = value;
@@ -80,6 +82,22 @@ __cvt (struct _reent *data, _PRINTF_FLOAT_TYPE value, int ndigits, int flags,
     }
   else
     *sign = '\000';
+# else /* !_NO_LONGDBL */
+  union
+  {
+    struct ldieee ieee;
+    _LONG_DOUBLE val;
+  } ld;
+
+  ld.val = value;
+  if (ld.ieee.sign)
+    { /* this will check for < 0 and -0.0 */
+      value = -value;
+      *sign = '-';
+    }
+  else
+    *sign = '\000';
+# endif /* !_NO_LONGDBL */
 
   if (ch == 'f' || ch == 'F')
     {
