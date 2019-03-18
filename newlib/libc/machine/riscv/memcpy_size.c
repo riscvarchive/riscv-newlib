@@ -9,12 +9,18 @@
    http://www.opensource.org/licenses.
 */
 
-#if defined(PREFER_SIZE_OVER_SPEED) || defined(__OPTIMIZE_SIZE__)
-#include "memcpy_size.c"
-#else
-#if __riscv_xlen == 64
-#include "memcpy64_speed.c"
-#else
-#include "memcpy32_speed.c"
-#endif
-#endif
+#include <stdint.h>
+#include <string.h>
+#include "../../string/local.h"
+
+void *
+    __inhibit_loop_to_libcall
+    memcpy(void *restrict d, const void *restrict s, size_t count)
+{
+  uint8_t *des = (uint8_t *)d;
+  const uint8_t *src = (const uint8_t *)s;
+  const uint8_t *src_end = ((const uint8_t *)s) + count;
+  while (src != src_end)
+    *(des++) = *(src++);
+  return d;
+}
