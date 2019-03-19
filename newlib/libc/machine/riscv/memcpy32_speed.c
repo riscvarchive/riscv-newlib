@@ -15,12 +15,21 @@
 
 #define ALIGNOF(addr) (((uintptr_t)(addr)) & (sizeof(void *) - 1))
 
-static void memcpy_4_0(uint8_t *des, const uint8_t *src)
+// load: aligned load
+// loadu: unaligned load
+// loaduX: unaligned load with offset X
+// u32: unsigned 32 bit integer
+// u64: unsigned 64 bit integer
+// u128: unsigned 128 bit integer
+
+static void load_u32(uint8_t *des, const uint8_t *src)
 {
   ((uint32_t *)des)[0] = ((const uint32_t *)src)[0];
 }
 
-static void memcpy_4_1(uint8_t *des, const uint8_t *src)
+#define loadu0_u32 load_u32
+
+static void loadu1_u32(uint8_t *des, const uint8_t *src)
 {
   uint32_t temp2 = ((const uint32_t *)(src - 1))[0];
   uint32_t temp3 = src[3];
@@ -30,7 +39,7 @@ static void memcpy_4_1(uint8_t *des, const uint8_t *src)
   ((uint32_t *)des)[0] = temp2;
 }
 
-static void memcpy_4_2(uint8_t *des, const uint8_t *src)
+static void loadu2_u32(uint8_t *des, const uint8_t *src)
 {
 #if 1
   uint16_t temp2 = ((const uint16_t *)src)[0];
@@ -46,7 +55,7 @@ static void memcpy_4_2(uint8_t *des, const uint8_t *src)
 #endif
 }
 
-static void memcpy_4_3(uint8_t *des, const uint8_t *src)
+static void loadu3_u32(uint8_t *des, const uint8_t *src)
 {
   uint32_t temp2 = src[0];
   uint32_t temp3 = ((const uint32_t *)(src + 1))[0];
@@ -55,7 +64,7 @@ static void memcpy_4_3(uint8_t *des, const uint8_t *src)
   ((uint32_t *)des)[0] = temp2;
 }
 
-static void memcpy_8_0(uint8_t *des, const uint8_t *src)
+static void load_u64(uint8_t *des, const uint8_t *src)
 {
   uint32_t temp2 = ((const uint32_t *)src)[0];
   uint32_t temp3 = ((const uint32_t *)src)[1];
@@ -63,7 +72,9 @@ static void memcpy_8_0(uint8_t *des, const uint8_t *src)
   ((uint32_t *)des)[1] = temp3;
 }
 
-static void memcpy_8_1(uint8_t *des, const uint8_t *src)
+#define loadu0_u64 load_u64
+
+static void loadu1_u64(uint8_t *des, const uint8_t *src)
 {
   uint32_t temp2 = ((const uint32_t *)(src - 1))[0];
   uint32_t temp3 = ((const uint32_t *)(src + 3))[0];
@@ -78,7 +89,7 @@ static void memcpy_8_1(uint8_t *des, const uint8_t *src)
   ((uint32_t *)des)[1] = temp3;
 }
 
-static void memcpy_8_2(uint8_t *des, const uint8_t *src)
+static void loadu2_u64(uint8_t *des, const uint8_t *src)
 {
   uint16_t temp2 = ((const uint16_t *)src)[0];
   uint16_t temp3 = ((const uint16_t *)src)[1];
@@ -90,7 +101,7 @@ static void memcpy_8_2(uint8_t *des, const uint8_t *src)
   ((uint16_t *)des)[3] = temp5;
 }
 
-static void memcpy_8_3(uint8_t *des, const uint8_t *src)
+static void loadu3_u64(uint8_t *des, const uint8_t *src)
 {
   uint32_t temp2 = src[0];
   uint32_t temp3 = ((const uint32_t *)(src + 1))[0];
@@ -104,7 +115,7 @@ static void memcpy_8_3(uint8_t *des, const uint8_t *src)
   ((uint32_t *)des)[1] = temp3;
 }
 
-static void memcpy_16_0(uint8_t *des, const uint8_t *src)
+static void load_u128(uint8_t *des, const uint8_t *src)
 {
   uint32_t temp2 = ((const uint32_t *)src)[0];
   uint32_t temp3 = ((const uint32_t *)src)[1];
@@ -116,7 +127,9 @@ static void memcpy_16_0(uint8_t *des, const uint8_t *src)
   ((uint32_t *)des)[3] = temp5;
 }
 
-static void memcpy_16_1(uint8_t *des, const uint8_t *src)
+#define loadu0_u128 load_u128
+
+static void loadu1_u128(uint8_t *des, const uint8_t *src)
 {
   uint32_t temp2 = ((const uint32_t *)(src - 1))[0];
   uint32_t temp3 = ((const uint32_t *)(src + 3))[0];
@@ -141,7 +154,7 @@ static void memcpy_16_1(uint8_t *des, const uint8_t *src)
   ((uint32_t *)des)[3] = temp2;
 }
 
-static void memcpy_16_2(uint8_t *des, const uint8_t *src)
+static void loadu2_u128(uint8_t *des, const uint8_t *src)
 {
   uint16_t temp2 = ((const uint16_t *)src)[0];
   uint16_t temp3 = ((const uint16_t *)src)[1];
@@ -161,7 +174,7 @@ static void memcpy_16_2(uint8_t *des, const uint8_t *src)
   ((uint16_t *)des)[7] = temp5;
 }
 
-static void memcpy_16_3(uint8_t *des, const uint8_t *src)
+static void loadu3_u128(uint8_t *des, const uint8_t *src)
 {
   uint32_t temp2 = src[0];
   uint32_t temp3 = ((const uint32_t *)(src + 1))[0];
@@ -185,52 +198,52 @@ static void memcpy_16_3(uint8_t *des, const uint8_t *src)
   ((uint32_t *)des)[3] = temp2;
 }
 
-#define MEMCPY_ALIGNMENT(align_num)           \
-  {                                           \
-    while (src != src_end)                    \
-    {                                         \
-      memcpy_16_##align_num(des, src);        \
-      src += 16;                              \
-      des += 16;                              \
-    }                                         \
-    switch (residual)                         \
-    {                                         \
-    case 15:                                  \
-      des[14] = src[14];                      \
-    case 14:                                  \
-      des[13] = src[13];                      \
-    case 13:                                  \
-      des[12] = src[12];                      \
-    case 12:                                  \
-      memcpy_8_##align_num(des, src);         \
-      memcpy_4_##align_num(des + 8, src + 8); \
-      break;                                  \
-    case 11:                                  \
-      des[10] = src[10];                      \
-    case 10:                                  \
-      des[9] = src[9];                        \
-    case 9:                                   \
-      des[8] = src[8];                        \
-    case 8:                                   \
-      memcpy_8_##align_num(des, src);         \
-      break;                                  \
-    case 7:                                   \
-      des[6] = src[6];                        \
-    case 6:                                   \
-      des[5] = src[5];                        \
-    case 5:                                   \
-      des[4] = src[4];                        \
-    case 4:                                   \
-      memcpy_4_##align_num(des, src);         \
-      break;                                  \
-    case 3:                                   \
-      des[2] = src[2];                        \
-    case 2:                                   \
-      des[1] = src[1];                        \
-    case 1:                                   \
-      des[0] = src[0];                        \
-      break;                                  \
-    }                                         \
+#define MEMCPY_OFFSET(align_num)                \
+  {                                             \
+    while (src != src_end)                      \
+    {                                           \
+      loadu##align_num##_u128(des, src);        \
+      src += 16;                                \
+      des += 16;                                \
+    }                                           \
+    switch (residual)                           \
+    {                                           \
+    case 15:                                    \
+      des[14] = src[14];                        \
+    case 14:                                    \
+      des[13] = src[13];                        \
+    case 13:                                    \
+      des[12] = src[12];                        \
+    case 12:                                    \
+      loadu##align_num##_u64(des, src);         \
+      loadu##align_num##_u32(des + 8, src + 8); \
+      break;                                    \
+    case 11:                                    \
+      des[10] = src[10];                        \
+    case 10:                                    \
+      des[9] = src[9];                          \
+    case 9:                                     \
+      des[8] = src[8];                          \
+    case 8:                                     \
+      loadu##align_num##_u64(des, src);         \
+      break;                                    \
+    case 7:                                     \
+      des[6] = src[6];                          \
+    case 6:                                     \
+      des[5] = src[5];                          \
+    case 5:                                     \
+      des[4] = src[4];                          \
+    case 4:                                     \
+      loadu##align_num##_u32(des, src);         \
+      break;                                    \
+    case 3:                                     \
+      des[2] = src[2];                          \
+    case 2:                                     \
+      des[1] = src[1];                          \
+    case 1:                                     \
+      des[0] = src[0];                          \
+      break;                                    \
+    }                                           \
   }
 
 void *
@@ -261,16 +274,16 @@ void *
     switch (ALIGNOF(src))
     {
     case 0:
-      MEMCPY_ALIGNMENT(0);
+      MEMCPY_OFFSET(0);
       break;
     case 1:
-      MEMCPY_ALIGNMENT(1);
+      MEMCPY_OFFSET(1);
       break;
     case 2:
-      MEMCPY_ALIGNMENT(2);
+      MEMCPY_OFFSET(2);
       break;
     case 3:
-      MEMCPY_ALIGNMENT(3);
+      MEMCPY_OFFSET(3);
       break;
     }
   }
