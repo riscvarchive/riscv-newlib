@@ -146,7 +146,7 @@ extern int isnan (double);
   #define __TMP_FLT_EVAL_METHOD
 #endif /* FLT_EVAL_METHOD */
 #if defined FLT_EVAL_METHOD
-  #if FLT_EVAL_METHOD == 0
+  #if (FLT_EVAL_METHOD == 0) || (FLT_EVAL_METHOD == 16)
     typedef float  float_t;
     typedef double double_t;
    #elif FLT_EVAL_METHOD == 1
