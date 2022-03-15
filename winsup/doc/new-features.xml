@@ -4,6 +4,226 @@
 
 <sect1 id="ov-new"><title>What's new and what changed in Cygwin</title>
 
+<sect2 id="ov-new3.1"><title>What's new and what changed in 3.1</title>
+
+<itemizedlist mark="bullet">
+
+<listitem><para>
+FIFOs can now be opened multiple times for writing.
+</para></listitem>
+
+<listitem><para>
+Add 24 bit color support using xterm compatibility mode in Windows 10
+1703 or later.  Add fake 24 bit color support for legacy console, which
+uses the nearest color from 16 system colors.
+</para></listitem>
+
+<listitem><para>
+Support pseudo console in PTY. Pseudo console is a new feature
+in Windows 10 1809, which provides console APIs on virtual
+terminal. With this patch, native console applications can work
+in PTYs such as mintty, ssh, gnu screen or tmux.
+</para></listitem>
+
+<listitem><para>
+Eliminate a header file name collision with &lt;X11/XLocale.h&gt; on
+case insensitive filesystems by reverting &lt;xlocale.h&gt; back to
+&lt;sys/_locale.h&gt;.
+</para></listitem>
+
+<listitem><para>
+If a SA_SIGINFO signal handler changes the ucontext_t pointed to by the
+third parameter, follow it after returning from the handler.
+</para></listitem>
+
+<listitem><para>
+New APIs: sched_getaffinity, sched_setaffinity, pthread_getaffinity_np,
+pthread_setaffinity_np, plus CPU_SET macros.
+</para></listitem>
+
+<listitem><para>
+New APIs: dbm_clearerr, dbm_close, dbm_delete, dbm_dirfno, dbm_error,
+dbm_fetch, dbm_firstkey, dbm_nextkey, dbm_open, dbm_store.
+</para></listitem>
+
+<listitem><para>
+Allow times(2) to have a NULL argument, as on Linux.
+</para></listitem>
+
+<listitem><para>
+Improve /proc/cpuinfo output and align more closely with Linux.
+</para></listitem>
+
+</itemizedlist>
+
+</sect2>
+
+<sect2 id="ov-new3.0"><title>What's new and what changed in 3.0</title>
+
+<itemizedlist mark="bullet">
+
+<listitem><para>
+Updated era and message locale data, in particular add era data for
+the new Tennō.
+</para></listitem>
+
+<listitem><para>
+Support for CLOCK_REALTIME_COARSE, CLOCK_MONOTONIC_COARSE,
+CLOCK_MONOTONIC_RAW, CLOCK_BOOTTIME, CLOCK_REALTIME_ALARM,
+CLOCK_BOOTTIME_ALARM clocks.
+</para></listitem>
+
+<listitem><para>
+Support for case sensitive directories via chattr(1).  This feature requires
+Windows 10 1803 or later and WSL installed.
+</para></listitem>
+
+<listitem><para>
+New file ioctls's FS_IOC_GETFLAGS and FS_IOC_SETFLAGS.  The actual inode
+flags are Cygwin-specific.  This allows to set or reset DOS attributes,
+file sparseness, FS level encryption and compression, as well as
+directory case sensitivity programatically.
+</para></listitem>
+
+<listitem><para>
+New tools chattr(1) and lsattr(1) to utilize setting and viewing the
+aforementioned new ioctl's on the command line.
+</para></listitem>
+
+<listitem><para>
+Support for exFAT.
+</para></listitem>
+
+<listitem><para>
+Support Linux-specific open(2) flag O_PATH.
+</para></listitem>
+
+<listitem><para>
+Support Linux-specific linkat(2) flag AT_EMPTY_PATH.
+</para></listitem>
+
+<listitem><para>
+Support overrun counter for posix timers (via timer_getoverrun() or
+siginfo_t::si_overrun).
+</para></listitem>
+
+<listitem><para>
+New APIs: secure_getenv, signalfd, timerfd_create, timerfd_gettime,
+timerfd_settime, timer_getoverrun.
+</para></listitem>
+
+<listitem><para>
+clock_nanosleep, pthread_condattr_setclock and timer_create now support
+all clocks, except CLOCK_PROCESS_CPUTIME_ID and CLOCK_THREAD_CPUTIME_ID.
+</para></listitem>
+
+<listitem><para>
+clock_setres is a no-op now.
+</para></listitem>
+
+<listitem><para>
+Use the new POSIX unlink semantics on NTFS starting with Windows 10
+1709.  Deleting an in-use file now actually removes the file, rather
+than moving it to the recycler bin.
+</para></listitem>
+
+<listitem><para>
+Use the new POSIX rename semantics on NTFS starting with Windows 10
+1809.  Renaming a file to another in-use file now actually removes the
+other file, rather than moving it to the recycler bin.
+</para></listitem>
+
+<listitem><para>
+open(..., O_TMPFILE) now moves the file to the trash bin immediately,
+to free the parent directory.
+</para></listitem>
+
+<listitem><para>
+Wctype functions updated to Unicode 11.0.
+</para></listitem>
+
+<listitem><para>
+Remove matherr, and SVID and X/Open math library configurations.
+Default math library configuration is now IEEE.
+</para></listitem>
+
+<listitem><para>
+Improve uname(2) for newly built applications.
+</para></listitem>
+
+<listitem><para>
+Kerberos/MSV1_0 S4U authentication replaces two old methods:
+Creating a token from scratch and Cygwin LSA authentication package.
+</para></listitem>
+
+<listitem><para>
+Cygwin PIDs have been decoupled from Windows PID.  Cygwin PIDs are now
+incrementally dealt in the range from 2 up to 65535, POSIX-like.
+Native Windows processes not started by Cygwin processes are mapped
+into the range beyond 65535.
+</para></listitem>
+
+<listitem><para>
+fork(2) now is able to recover from when an in-use executable/dll is
+removed or replaced during process runtime.  This feature is disabled by
+default and limited to exes/dlls on the same NTFS partition as the Cygwin
+installation.  For more information and how to enable, please refer to
+<xref linkend="ov-hi-process"></xref>.
+</para></listitem>
+
+<listitem><para>
+Improve /proc/&lt;PID&gt;/cmdline and /proc/&lt;PID&gt;/stat handling to allow
+all processes access to basic process information of foreign processes.
+</para></listitem>
+
+</itemizedlist>
+
+</sect2>
+
+<sect2 id="ov-new2.11"><title>What's new and what changed in 2.11</title>
+
+<itemizedlist mark="bullet">
+
+<listitem><para>
+SO_RCVTIMEO and SO_SNDTIMEO socket options are now honored.
+</para></listitem>
+
+<listitem><para>
+/proc/cpuinfo now reports L3 cache size on Intel CPUs.
+</para></listitem>
+
+<listitem><para>
+New APIs: clearenv, pthread_tryjoin_np, pthread_timedjoin_np, sched_getcpu.
+</para></listitem>
+
+<listitem><para>
+New APIs for POSIX Asynchronous I/O: aio_cancel, aio_error, aio_fsync,
+aio_read, aio_return, aio_suspend, aio_write, lio_listio.
+New Header: &lt;aio.h&gt;.
+</para></listitem>
+
+<listitem><para>
+Drop denormal-operand exception from FE_ALL_EXCEPT, as on Linux.
+</para></listitem>
+
+<listitem><para>
+Rename the --file option of setfacl(1) to --set-file, as on Linux.
+</para></listitem>
+
+<listitem><para>
+Support Unicode 10.
+</para></listitem>
+
+<listitem><para>
+Following glibc, `union wait' has now been removed.  Applications
+using union wait and these macros will have to migrate to the
+POSIX-specified int status type.
+</para></listitem>
+
+</itemizedlist>
+
+</sect2>
+
 <sect2 id="ov-new2.10"><title>What's new and what changed in 2.10</title>
 
 <itemizedlist mark="bullet">
@@ -17,7 +237,32 @@ scanf/wscanf now handle the POSIX %m modifier.
 </para></listitem>
 
 <listitem><para>
-- scanf now handles the %l[ conversion.
+scanf now handles the %l[ conversion.
+</para></listitem>
+
+<listitem><para>
+Improved hostprogs compatibility for cross-compiling the Linux kernel.
+New headers: &lt;asm/bitsperlong.h&gt;, &lt;asm/posix_types.h&gt;.
+</para></listitem>
+
+<listitem><para>
+Built-in implementation of Stack Smashing Protection compiler feature.
+New APIs: __stack_chk_fail, __stack_chk_guard.
+</para></listitem>
+
+<listitem><para>
+Built-in implementation of _FORTIFY_SOURCE guards for functions in
+&lt;stdio.h&gt;, &lt;stdlib.h&gt;, &lt;string.h&gt;, &lt;strings.h&gt;,
+&lt;unistd.h&gt;, &lt;wchar.h&gt;, &lt;sys/poll.h&gt;, and &lt;sys/socket.h&gt;.
+New APIs:  __chk_fail, __gets_chk, __memcpy_chk, __memmove_chk, __mempcpy_chk,
+__memset_chk, __snprintf_chk, __sprintf_chk, __stpcpy_chk, __stpncpy_chk,
+__strcat_chk, __strcpy_chk, __strncat_chk, __strncpy_chk, __vsnprintf_chk,
+__vsprintf_chk.
+</para></listitem>
+
+<listitem><para>
+Built-in implementation of POSIX.1-2001 message catalog support.
+New APIs: catclose, catgets, catopen.  New tool: gencat.
 </para></listitem>
 
 <listitem><para>

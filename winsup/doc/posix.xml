@@ -32,6 +32,13 @@ also IEEE Std 1003.1-2008 (POSIX.1-2008).</para>
     acoshf
     acoshl
     acosl
+    aio_cancel
+    aio_error
+    aio_fsync
+    aio_read
+    aio_return
+    aio_suspend
+    aio_write
     alarm
     alphasort
     asctime
@@ -86,9 +93,9 @@ also IEEE Std 1003.1-2008 (POSIX.1-2008).</para>
     catanhf
     catanhl
     catanl
-    catclose 			(available in external "catgets" library)
-    catgets  			(available in external "catgets" library)
-    catopen  			(available in external "catgets" library)
+    catclose
+    catgets
+    catopen
     cbrt
     cbrtf
     cbrtl
@@ -491,6 +498,7 @@ also IEEE Std 1003.1-2008 (POSIX.1-2008).</para>
     lgammal
     link
     linkat
+    lio_listio
     listen
     llabs
     lldiv
@@ -995,6 +1003,7 @@ also IEEE Std 1003.1-2008 (POSIX.1-2008).</para>
     time
     timer_create		(see chapter "Implementation Notes")
     timer_delete
+    timer_getoverrun
     timer_gettime
     timer_settime
     times
@@ -1284,6 +1293,7 @@ also IEEE Std 1003.1-2008 (POSIX.1-2008).</para>
     asprintf_r
     basename			(see chapter "Implementation Notes")
     canonicalize_file_name
+    clearenv
     clog10
     clog10f
     clog10l
@@ -1309,8 +1319,6 @@ also IEEE Std 1003.1-2008 (POSIX.1-2008).</para>
     fedisableexcept
     feenableexcept
     fegetexcept
-    fegetprec
-    fesetprec
     ffsl
     ffsll
     fgets_unlocked
@@ -1351,10 +1359,14 @@ also IEEE Std 1003.1-2008 (POSIX.1-2008).</para>
     pow10f
     pow10l
     ppoll
+    pthread_getaffinity_np
     pthread_getattr_np
     pthread_getname_np
+    pthread_setaffinity_np
     pthread_setname_np
     pthread_sigqueue
+    pthread_timedjoin_np
+    pthread_tryjoin_np
     ptsname_r
     putwc_unlocked
     putwchar_unlocked
@@ -1364,7 +1376,12 @@ also IEEE Std 1003.1-2008 (POSIX.1-2008).</para>
     rawmemchr
     removexattr
     scandirat
+    sched_getaffinity
+    sched_getcpu
+    sched_setaffinity
+    secure_getenv
     setxattr
+    signalfd
     sincos
     sincosf
     sincosl
@@ -1380,6 +1397,9 @@ also IEEE Std 1003.1-2008 (POSIX.1-2008).</para>
     strverscmp
     sysinfo
     tdestroy
+    timerfd_create
+    timerfd_gettime
+    timerfd_settime
     timegm
     timelocal
     toascii_l
@@ -1425,6 +1445,8 @@ also IEEE Std 1003.1-2008 (POSIX.1-2008).</para>
     acltotext
     endmntent
     facl
+    fegetprec
+    fesetprec
     futimesat
     getmntent
     memalign
@@ -1553,13 +1575,6 @@ also IEEE Std 1003.1-2008 (POSIX.1-2008).</para>
 <sect1 id="std-notimpl"><title>NOT implemented system interfaces from the Single Unix Specification, Volume 4:</title>
 
 <screen>
-    aio_cancel
-    aio_error
-    aio_fsync
-    aio_read
-    aio_return
-    aio_suspend
-    aio_write
     endnetent
     fattach
     fmtmsg
@@ -1572,7 +1587,6 @@ also IEEE Std 1003.1-2008 (POSIX.1-2008).</para>
     getnetent
     getpmsg
     isastream
-    lio_listio
     mlockall
     munlockall
     posix_mem_offset
@@ -1583,7 +1597,6 @@ also IEEE Std 1003.1-2008 (POSIX.1-2008).</para>
     pthread_mutex_consistent
     putmsg
     setnetent
-    timer_getoverrun
     ulimit
     waitid
 </screen>

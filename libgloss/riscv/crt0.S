@@ -9,6 +9,8 @@
    http://www.opensource.org/licenses.
 */
 
+#include "newlib.h"
+
 #=========================================================================
 # crt0.S : Entry point for RISC-V user programs
 #=========================================================================
@@ -30,9 +32,20 @@ _start:
   sub     a2, a2, a0
   li      a1, 0
   call    memset
+#ifdef _LITE_EXIT
+  # Make reference to atexit weak to avoid unconditionally pulling in
+  # support code.  Refer to comments in __atexit.c for more details.
+  .weak   atexit
+  la      a0, atexit
+  beqz    a0, .Lweak_atexit
+  .weak   __libc_fini_array
+#endif
 
   la      a0, __libc_fini_array   # Register global termination functions
   call    atexit                  #  to be called upon exit
+#ifdef _LITE_EXIT
+.Lweak_atexit:
+#endif
   call    __libc_init_array       # Run global initialization functions
 
   lw      a0, 0(sp)                  # a0 = argc
@@ -41,14 +54,3 @@ _start:
   call    main
   tail    exit
   .size  _start, .-_start
-
-  .global _init
-  .type   _init, @function
-  .global _fini
-  .type   _fini, @function
-_init:
-_fini:
-  # These don't have to do anything since we use init_array/fini_array.
-  ret
-  .size  _init, .-_init
-  .size  _fini, .-_fini

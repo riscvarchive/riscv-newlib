@@ -15,6 +15,7 @@ details. */
 #include <stdio.h>
 #include <syslog.h>
 #include <unistd.h>
+#include <sys/socket.h>
 #include <sys/un.h>
 #include "cygerrno.h"
 #include "security.h"
@@ -185,7 +186,7 @@ static enum {
 static int syslogd_sock = -1;
 extern "C" int cygwin_socket (int, int, int);
 extern "C" int cygwin_connect (int, const struct sockaddr *, int);
-extern int get_inet_addr (const struct sockaddr *, int,
+extern int get_inet_addr_local (const struct sockaddr *, int,
 			  struct sockaddr_storage *, int *,
 			  int * = NULL, int * = NULL);
 
@@ -203,16 +204,24 @@ connect_syslogd ()
   syslogd_sock = -1;
   sun.sun_family = AF_LOCAL;
   strncpy (sun.sun_path, _PATH_LOG, sizeof sun.sun_path);
-  if (get_inet_addr ((struct sockaddr *) &sun, sizeof sun, &sst, &len, &type))
+  if (get_inet_addr_local ((struct sockaddr *) &sun, sizeof sun,
+			   &sst, &len, &type))
     return;
-  if ((fd = cygwin_socket (AF_LOCAL, type, 0)) < 0)
+  if ((fd = cygwin_socket (AF_LOCAL, type | SOCK_CLOEXEC, 0)) < 0)
     return;
   if (cygwin_connect (fd, (struct sockaddr *) &sun, sizeof sun) == 0)
     {
-      /* connect on a dgram socket always succeeds.  We still don't know
-	 if syslogd is actually listening. */
       if (type == SOCK_DGRAM)
 	{
+	  /*
+	   * FIXME
+	   *
+	   * As soon as AF_LOCAL sockets are using pipes, this code has to
+	   * got away.
+	   */
+
+	  /* connect on a dgram socket always succeeds.  We still don't know
+	     if syslogd is actually listening. */
 	  tmp_pathbuf tp;
 	  PMIB_UDPTABLE tab = (PMIB_UDPTABLE) tp.w_get ();
 	  DWORD size = 65536;
@@ -238,8 +247,12 @@ connect_syslogd ()
 	}
       syslogd_inited = type == SOCK_DGRAM ? inited_dgram : inited_stream;
     }
+  else
+    {
+      close (fd);
+      return;
+    }
   syslogd_sock = fd;
-  fcntl64 (syslogd_sock, F_SETFD, FD_CLOEXEC);
   debug_printf ("found /dev/log, fd = %d, type = %s",
 		fd, syslogd_inited == inited_stream ? "STREAM" : "DGRAM");
   return;
@@ -439,38 +452,6 @@ syslog (int priority, const char *message, ...)
   va_list ap;
   va_start (ap, message);
   vsyslog (priority, message, ap);
-  va_end (ap);
-}
-
-static NO_COPY muto klog_guard;
-fhandler_mailslot *dev_kmsg;
-
-extern "C" void
-vklog (int priority, const char *message, va_list ap)
-{
-  /* TODO: kernel messages are under our control entirely and they should
-     be quick.  No playing with /dev/null, but a fixed upper size for now. */
-  char buf[2060];	/* 2048 + a prority */
-  if (!(priority & ~LOG_PRIMASK))
-    priority = LOG_KERN | LOG_PRI (priority);
-  __small_sprintf (buf, "<%d>", priority);
-  __small_vsprintf (buf + strlen (buf), message, ap);
-  klog_guard.init ("klog_guard")->acquire ();
-  if (!dev_kmsg)
-    dev_kmsg = (fhandler_mailslot *) build_fh_name ("/dev/kmsg");
-  if (dev_kmsg && !dev_kmsg->get_handle ())
-    dev_kmsg->open (O_WRONLY, 0);
-  if (dev_kmsg && dev_kmsg->get_handle ())
-    dev_kmsg->write (buf, strlen (buf) + 1);
-  klog_guard.release ();
-}
-
-extern "C" void
-klog (int priority, const char *message, ...)
-{
-  va_list ap;
-  va_start (ap, message);
-  vklog (priority, message, ap);
   va_end (ap);
 }
 

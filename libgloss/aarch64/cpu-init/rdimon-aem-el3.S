@@ -145,6 +145,33 @@ _flat_map:
 	dsb	sy
 	msr	sctlr_el3, x0
 	isb
+
+	/* Determine if SVE is available.  */
+       mrs      x0, id_aa64pfr0_el1
+       tbz      x0, 32, .Lnosve
+
+       /* set up CPTR_EL3.TZ to 1.  */
+       mrs     x0, cptr_el3
+
+       /* TZ is bit 8 of CPTR_EL3.  */
+       orr     x0, x0, #0x100
+       msr     cptr_el3, x0
+       isb
+
+       /* set up vector lenght in ZCR_EL3 (4 LSB).  */
+       mov     x2, #0xF
+
+       /* Try to set the maximum value supported by the architecture (2048).
+	  SVE Arch.
+
+	    "If this field is set to a value that is not supported by the
+	    implementation then reading the register must return the highest
+	    supported vector length that is less than the value written."  */
+       mrs     x1, s3_6_c1_c2_0                /* mrs  x1, zcr_el3.  */
+       bfi     x1, x2, 0, 4
+       msr     s3_6_c1_c2_0, x1                /* msr  zcr_el3, x1.  */
+       isb
+.Lnosve:
 	ret
 
 	.data
@@ -157,12 +184,16 @@ ttb:
 	.align 2
 	.global	FUNCTION (_cpu_init_hook)
 	.type	FUNCTION (_cpu_init_hook), %function
+	.cfi_sections	.debug_frame
 FUNCTION (_cpu_init_hook):
-	sub	sp, sp, #16
-	str	x30, [sp, xzr]
+	.cfi_startproc
+	str	x30, [sp, -16]!
+	.cfi_def_cfa_offset 16
+	.cfi_offset 30, -16
 	bl	_init_vectors
 	bl	_flat_map
-	ldr	x30, [sp, xzr]
-	add	sp, sp, #16
+	ldr	x30, [sp], 16
+	.cfi_restore 30
 	ret
+	.cfi_endproc
 	.size	FUNCTION (_cpu_init_hook), .-FUNCTION (_cpu_init_hook)

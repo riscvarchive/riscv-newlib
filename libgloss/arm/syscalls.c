@@ -18,30 +18,30 @@
 #include "swi.h"
 
 /* Forward prototypes.  */
-int     _system     (const char *);
-int     _rename     (const char *, const char *);
-int     _isatty		(int);
+int	_system		(const char *);
+int	_rename		(const char *, const char *);
+int	_isatty		(int);
 clock_t _times		(struct tms *);
-int     _gettimeofday	(struct timeval *, void *);
-int     _unlink		(const char *);
-int     _link 		(void);
-int     _stat 		(const char *, struct stat *);
-int     _fstat 		(int, struct stat *);
+int	_gettimeofday	(struct timeval *, void *);
+int	_unlink		(const char *);
+int	_link		(const char *, const char *);
+int	_stat		(const char *, struct stat *);
+int	_fstat		(int, struct stat *);
 int	_swistat	(int fd, struct stat * st);
-caddr_t _sbrk		(int);
-int     _getpid		(int);
-int     _close		(int);
-clock_t _clock		(void);
-int     _swiclose	(int);
-int     _open		(const char *, int, ...);
-int     _swiopen	(const char *, int);
-int     _write 		(int, char *, int);
-int     _swiwrite	(int, char *, int);
-int     _lseek		(int, int, int);
-int     _swilseek	(int, int, int);
-int     _read		(int, char *, int);
-int     _swiread	(int, char *, int);
-void    initialise_monitor_handles (void);
+void *	_sbrk		(ptrdiff_t);
+pid_t	_getpid		(void);
+int	_close		(int);
+clock_t	_clock		(void);
+int	_swiclose	(int);
+int	_open		(const char *, int, ...);
+int	_swiopen	(const char *, int);
+int	_write		(int, const void *, size_t);
+int	_swiwrite	(int, const void *, size_t);
+_off_t	_lseek		(int, _off_t, int);
+_off_t	_swilseek	(int, _off_t, int);
+int	_read		(int, void *, size_t);
+int	_swiread	(int, void *, size_t);
+void	initialise_monitor_handles (void);
 
 static int	checkerror	(int);
 static int	error		(int);
@@ -143,7 +143,7 @@ initialise_monitor_handles (void)
   int i;
   
   /* Open the standard file descriptors by opening the special
-   * teletype device, ":tt", read-only to obtain a descritpor for
+   * teletype device, ":tt", read-only to obtain a descriptor for
    * standard input and write-only to obtain a descriptor for standard
    * output. Finally, open ":tt" in append mode to obtain a descriptor
    * for standard error. Since this is a write mode, most kernels will
@@ -154,7 +154,7 @@ initialise_monitor_handles (void)
 
 #ifdef ARM_RDI_MONITOR
   int volatile block[3];
-  
+
   block[0] = (int) ":tt";
   block[2] = 3;     /* length of filename */
   block[1] = 0;     /* mode "r" */
@@ -323,7 +323,7 @@ get_errno (void)
 #ifdef ARM_RDI_MONITOR
   return do_AngelSWI (AngelSWI_Reason_Errno, NULL);
 #else
-  register r0 asm("r0");
+  register int r0 asm("r0");
   asm ("swi %a1" : "=r"(r0) : "i" (SWI_GetErrno));
   return r0;
 #endif
@@ -351,25 +351,23 @@ checkerror (int result)
    len, is the length in bytes to read. 
    Returns the number of bytes *not* written. */
 int
-_swiread (int fh,
-	  char * ptr,
-	  int len)
+_swiread (int fh, void * ptr, size_t len)
 {
 #ifdef ARM_RDI_MONITOR
   int block[3];
-  
+
   block[0] = fh;
   block[1] = (int) ptr;
-  block[2] = len;
-  
+  block[2] = (int) len;
+
   return checkerror (do_AngelSWI (AngelSWI_Reason_Read, block));
 #else
-  register r0 asm("r0");
-  register r1 asm("r1");
-  register r2 asm("r2");
+  register int r0 asm("r0");
+  register int r1 asm("r1");
+  register int r2 asm("r2");
   r0 = fh;
-  r1 = (int)ptr;
-  r2 = len;
+  r1 = (int) ptr;
+  r2 = (int) len;
   asm ("swi %a4"
        : "=r" (r0)
        : "0"(r0), "r"(r1), "r"(r2), "i"(SWI_Read));
@@ -381,9 +379,7 @@ _swiread (int fh,
    Translates the return of _swiread into
    bytes read. */
 int __attribute__((weak))
-_read (int fd,
-       char * ptr,
-       int len)
+_read (int fd, void * ptr, size_t len)
 {
   int res;
   struct fdent *pfd;
@@ -408,12 +404,10 @@ _read (int fd,
 }
 
 /* fd, is a user file descriptor. */
-int
-_swilseek (int fd,
-	int ptr,
-	int dir)
+off_t
+_swilseek (int fd, off_t ptr, int dir)
 {
-  int res;
+  off_t res;
   struct fdent *pfd;
 
   /* Valid file descriptor? */
@@ -447,7 +441,7 @@ _swilseek (int fd,
         }
       dir = SEEK_SET;
     }
- 
+
 #ifdef ARM_RDI_MONITOR
   int block[2];
   if (dir == SEEK_END)
@@ -458,10 +452,10 @@ _swilseek (int fd,
         return -1;
       ptr += res;
     }
-  
+
   /* This code only does absolute seeks.  */
   block[0] = pfd->handle;
-  block[1] = ptr;
+  block[1] = (int) ptr;
   res = checkerror (do_AngelSWI (AngelSWI_Reason_Seek, block));
 #else
   if (dir == SEEK_END)
@@ -493,9 +487,8 @@ _swilseek (int fd,
     return -1;
 }
 
-_lseek (int fd,
-	int ptr,
-	int dir)
+off_t
+_lseek (int fd, off_t ptr, int dir)
 {
   return _swilseek (fd, ptr, dir);
 }
@@ -503,23 +496,20 @@ _lseek (int fd,
 /* fh, is a valid internal file handle.
    Returns the number of bytes *not* written. */
 int
-_swiwrite (
-	   int    fh,
-	   char * ptr,
-	   int    len)
+_swiwrite (int fh, const void * ptr, size_t len)
 {
 #ifdef ARM_RDI_MONITOR
   int block[3];
-  
+
   block[0] = fh;
   block[1] = (int) ptr;
-  block[2] = len;
-  
+  block[2] = (int) len;
+
   return checkerror (do_AngelSWI (AngelSWI_Reason_Write, block));
 #else
-  register r0 asm("r0");
-  register r1 asm("r1");
-  register r2 asm("r2");
+  register int r0 asm("r0");
+  register int r1 asm("r1");
+  register int r2 asm("r2");
   r0 = fh;
   r1 = (int)ptr;
   r2 = len;
@@ -532,9 +522,7 @@ _swiwrite (
 
 /* fd, is a user file descriptor. */
 int __attribute__((weak))
-_write (int    fd,
-	char * ptr,
-	int    len)
+_write (int fd, const void * ptr, size_t len)
 {
   int res;
   struct fdent *pfd;
@@ -592,7 +580,7 @@ _swiopen (const char * path, int flags)
         }
     }
 
-  /* The flags are Unix-style, so we need to convert them. */ 
+  /* The flags are Unix-style, so we need to convert them.  */
 #ifdef O_BINARY
   if (flags & O_BINARY)
     aflags |= 1;
@@ -610,25 +598,24 @@ _swiopen (const char * path, int flags)
 
   if (flags & O_APPEND)
     {
-      /* Can't ask for w AND a; means just 'a'.  */
-      aflags &= ~4;
+      aflags &= ~4; /* Can't ask for w AND a; means just 'a'.  */
       aflags |= 8;
     }
-  
+
 #ifdef ARM_RDI_MONITOR
   block[0] = (int) path;
   block[2] = strlen (path);
   block[1] = aflags;
-  
+
   fh = do_AngelSWI (AngelSWI_Reason_Open, block);
-  
+
 #else
   asm ("mov r0,%2; mov r1, %3; swi %a1; mov %0, r0"
        : "=r"(fh)
        : "i" (SWI_Open),"r"(path),"r"(aflags)
        : "r0","r1");
 #endif
-  
+
   /* Return a user file descriptor or an error. */
   if (fh >= 0)
     {
@@ -653,7 +640,7 @@ _swiclose (int fh)
 #ifdef ARM_RDI_MONITOR
   return checkerror (do_AngelSWI (AngelSWI_Reason_Close, &fh));
 #else
-  register r0 asm("r0");
+  register int r0 asm("r0");
   r0 = fh;
   asm ("swi %a2" 
        : "=r"(r0) 
@@ -694,30 +681,30 @@ _close (int fd)
   return res;
 }
 
-int __attribute__((weak))
-_getpid (int n __attribute__ ((unused)))
+pid_t __attribute__((weak))
+_getpid (void)
 {
-  return 1;
+  return (pid_t)1;
 }
 
 /* Heap limit returned from SYS_HEAPINFO Angel semihost call.  */
 uint __heap_limit = 0xcafedead;
 
-caddr_t __attribute__((weak))
-_sbrk (int incr)
+void * __attribute__((weak))
+_sbrk (ptrdiff_t incr)
 {
-  extern char end asm ("end"); /* Defined by the linker.  */
+  extern char   end asm ("end"); /* Defined by the linker.  */
   static char * heap_end;
-  char * prev_heap_end;
+  char *        prev_heap_end;
 
   if (heap_end == NULL)
     heap_end = & end;
-  
+
   prev_heap_end = heap_end;
-  
+
   if ((heap_end + incr > stack_ptr)
       /* Honour heap limit if it's valid.  */
-      || (__heap_limit != 0xcafedead && heap_end + incr > __heap_limit))
+      || (__heap_limit != 0xcafedead && heap_end + incr > (char *)__heap_limit))
     {
       /* Some of the libstdc++-v3 tests rely upon detecting
 	 out of memory errors, so do not abort here.  */
@@ -725,17 +712,17 @@ _sbrk (int incr)
       extern void abort (void);
 
       _write (1, "_sbrk: Heap and stack collision\n", 32);
-      
+
       abort ();
 #else
       errno = ENOMEM;
-      return (caddr_t) -1;
+      return (void *) -1;
 #endif
     }
-  
+
   heap_end += incr;
 
-  return (caddr_t) prev_heap_end;
+  return (void *) prev_heap_end;
 }
 
 int 
@@ -783,19 +770,19 @@ _stat (const char *fname, struct stat *st)
 {
   int fd, res;
   memset (st, 0, sizeof (* st));
-  /* The best we can do is try to open the file readonly.  
-     If it exists, then we can guess a few things about it. */
+  /* The best we can do is try to open the file readonly.  If it exists,
+     then we can guess a few things about it.  */
   if ((fd = _open (fname, O_RDONLY)) == -1)
     return -1;
   st->st_mode |= S_IFREG | S_IREAD;
   res = _swistat (fd, st);
-  /* Not interested in the error. */
+  /* Not interested in the error.  */
   _close (fd); 
   return res;
 }
 
 int __attribute__((weak))
-_link (void)
+_link (const char *__path1 __attribute__ ((unused)), const char *__path2 __attribute__ ((unused)))
 {
   errno = ENOSYS;
   return -1;
@@ -811,7 +798,7 @@ _unlink (const char *path)
   block[1] = strlen(path);
   res = do_AngelSWI (AngelSWI_Reason_Remove, block);
 #else
-  register r0 asm("r0");
+  register int r0 asm("r0");
   r0 = (int)path;
   asm ("swi %a2" 
        : "=r"(r0)
@@ -879,7 +866,7 @@ _times (struct tms * tp)
       tp->tms_cutime = 0;	/* user time, children */
       tp->tms_cstime = 0;	/* system time, children */
     }
-  
+
   return timeval;
 };
 
@@ -900,7 +887,7 @@ _isatty (int fd)
 #ifdef ARM_RDI_MONITOR
   tty = do_AngelSWI (AngelSWI_Reason_IsTTY, &pfd->handle);
 #else
-  register r0 asm("r0");
+  register int r0 asm("r0");
   r0 = pfd->handle;
   asm ("swi %a2"
        : "=r" (r0)
@@ -941,7 +928,7 @@ _system (const char *s)
     }
   return e;
 #else
-  register r0 asm("r0");
+  register int r0 asm("r0");
   r0 = (int)s;
   asm ("swi %a2" 
        : "=r" (r0)
@@ -961,8 +948,8 @@ _rename (const char * oldpath, const char * newpath)
   block[3] = strlen(newpath);
   return checkerror (do_AngelSWI (AngelSWI_Reason_Rename, block)) ? -1 : 0;
 #else
-  register r0 asm("r0");
-  register r1 asm("r1");
+  register int r0 asm("r0");
+  register int r1 asm("r1");
   r0 = (int)oldpath;
   r1 = (int)newpath;
   asm ("swi %a3" 

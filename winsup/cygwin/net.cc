@@ -19,35 +19,21 @@ details. */
 #undef u_long
 #define u_long __ms_u_long
 #endif
-#include <ws2tcpip.h>
-#include <mswsock.h>
-#include <iphlpapi.h>
-#include "miscfuncs.h"
-#include <ctype.h>
-#include <wchar.h>
-#include <stdlib.h>
+#include <w32api/ws2tcpip.h>
+#include <w32api/mswsock.h>
+#include <w32api/iphlpapi.h>
 #define gethostname cygwin_gethostname
 #include <unistd.h>
 #undef gethostname
+#include <ifaddrs.h>
 #include <netdb.h>
-#include <cygwin/in.h>
 #include <asm/byteorder.h>
-#include <assert.h>
-#include "cygerrno.h"
-#include "security.h"
-#include "cygwin/version.h"
 #include "shared_info.h"
-#include "perprocess.h"
 #include "path.h"
 #include "fhandler.h"
 #include "dtable.h"
 #include "cygheap.h"
-#include "sigproc.h"
-#include "registry.h"
-#include "cygtls.h"
-#include "ifaddrs.h"
 #include "tls_pbuf.h"
-#include "ntdll.h"
 
 /* Unfortunately defined in Windows header files and arpa/nameser_compat.h. */
 #undef NOERROR
@@ -59,11 +45,8 @@ extern "C"
 {
   int h_errno;
 
-  int __stdcall rcmd (char **ahost, unsigned short inport, char *locuser,
-		      char *remuser, char *cmd, SOCKET * fd2p);
   int sscanf (const char *, const char *, ...);
   int cygwin_inet_pton(int, const char *, void *);
-  int cygwin_inet_aton(const char *, struct in_addr *);
   const char *cygwin_inet_ntop (int, const void *, char *, socklen_t);
   int dn_length1(const unsigned char *, const unsigned char *,
 		 const unsigned char *);
@@ -78,7 +61,7 @@ get (const int fd)
   cygheap_fdget cfd (fd);
 
   if (cfd < 0)
-    return 0;
+    return NULL;
 
   fhandler_socket *const fh = cfd->is_socket ();
 
@@ -150,14 +133,7 @@ inet_makeaddr (int net, int lna)
   return in;
 }
 
-struct tl
-{
-  int w;
-  const char *s;
-  int e;
-};
-
-static const struct tl errmap[] = {
+static const errmap_t wsock_errmap[] = {
   {WSA_INVALID_HANDLE, "WSA_INVALID_HANDLE", EBADF},
   {WSA_NOT_ENOUGH_MEMORY, "WSA_NOT_ENOUGH_MEMORY", ENOMEM},
   {WSA_INVALID_PARAMETER, "WSA_INVALID_PARAMETER", EINVAL},
@@ -201,18 +177,21 @@ static const struct tl errmap[] = {
   {WSAEREMOTE, "WSAEREMOTE", EREMOTE},
   {WSAEINVAL, "WSAEINVAL", EINVAL},
   {WSAEFAULT, "WSAEFAULT", EFAULT},
+  {WSAEBADF, "WSAEBADF", EBADF},
+  {WSAEACCES, "WSAEACCES", EACCES},
+  {WSAEMFILE, "WSAEMFILE", EMFILE},
   {0, "NOERROR", 0},
   {0, NULL, 0}
 };
 
-static int
-find_winsock_errno (int why)
+int
+find_winsock_errno (DWORD why)
 {
-  for (int i = 0; errmap[i].s != NULL; ++i)
-    if (why == errmap[i].w)
-      return errmap[i].e;
+  for (int i = 0; wsock_errmap[i].s != NULL; ++i)
+    if (why == wsock_errmap[i].w)
+      return wsock_errmap[i].e;
 
-  return EPERM;
+  return EACCES;
 }
 
 void
@@ -229,7 +208,7 @@ __set_winsock_errno (const char *fn, int ln)
  * Since the member `s' isn't used for debug output we can use it
  * for the error text returned by herror and hstrerror.
  */
-static const struct tl host_errmap[] = {
+static const errmap_t host_errmap[] = {
   {WSAHOST_NOT_FOUND, "Unknown host", HOST_NOT_FOUND},
   {WSATRY_AGAIN, "Host name lookup failure", TRY_AGAIN},
   {WSANO_RECOVERY, "Unknown server error", NO_RECOVERY},
@@ -242,7 +221,7 @@ set_host_errno ()
 {
   int i;
 
-  int why = WSAGetLastError ();
+  DWORD why = WSAGetLastError ();
 
   for (i = 0; host_errmap[i].w != 0; ++i)
     if (why == host_errmap[i].w)
@@ -465,8 +444,6 @@ dup_ent (unionent *&dst, unionent *src, unionent::struct_type type)
 	      dp += DWORD_round (src->h_len);
 	    }
 	}
-      /* Sanity check that we did our bookkeeping correctly. */
-      assert ((dp - (char *) dst) == sz);
     }
   debug_printf ("duped %sent \"%s\", %p", entnames[type], dst ? dst->name : "<null!>", dst);
   return dst;
@@ -490,7 +467,7 @@ dup_ent (servent *src)
   return (servent *) dup_ent (_my_tls.locals.servent_buf, (unionent *) src, unionent::t_servent);
 }
 
-/* exported as getprotobyname: standards? */
+/* exported as getprotobyname: POSIX.1-2001, POSIX.1-2008, 4.3BSD */
 extern "C" struct protoent *
 cygwin_getprotobyname (const char *p)
 {
@@ -503,164 +480,44 @@ cygwin_getprotobyname (const char *p)
   return NULL;
 }
 
-/* exported as getprotobynumber: standards? */
+/* exported as getprotobynumber: POSIX.1-2001, POSIX.1-2008, 4.3BSD */
 extern "C" struct protoent *
 cygwin_getprotobynumber (int number)
 {
   return dup_ent (getprotobynumber (number));
 }
 
-#ifndef SIO_BASE_HANDLE
-#define SIO_BASE_HANDLE _WSAIOR(IOC_WS2,34)
-#endif
-
-bool
-fdsock (cygheap_fdmanip& fd, const device *dev, SOCKET soc)
-{
-  fd = build_fh_dev (*dev);
-  if (!fd.isopen ())
-    return false;
-
-  /* Usually sockets are inheritable IFS objects.  Unfortunately some virus
-     scanners or other network-oriented software replace normal sockets
-     with their own kind, which is running through a filter driver called
-     "layered service provider" (LSP).
-
-     LSP sockets are not kernel objects.  They are typically not marked as
-     inheritable, nor are they IFS handles.  They are in fact not inheritable
-     to child processes, and it does not help to mark them inheritable via
-     SetHandleInformation.  Subsequent socket calls in the child process fail
-     with error 10038, WSAENOTSOCK.
-
-     There's a neat way to workaround these annoying LSP sockets.  WSAIoctl
-     allows to fetch the underlying base socket, which is a normal, inheritable
-     IFS handle.  So we fetch the base socket, duplicate it, and close the
-     original socket.  Now we have a standard IFS socket which (hopefully)
-     works as expected.
-
-     If that doesn't work for some reason, mark the sockets for duplication
-     via WSADuplicateSocket/WSASocket.  This requires to start the child
-     process in SUSPENDED state so we only do this if really necessary. */
-  DWORD flags;
-  bool fixup = false;
-  if (!GetHandleInformation ((HANDLE) soc, &flags)
-      || !(flags & HANDLE_FLAG_INHERIT))
-    {
-      int ret;
-      SOCKET base_soc;
-      DWORD bret;
-
-      fixup = true;
-      debug_printf ("LSP handle: %p", soc);
-      ret = WSAIoctl (soc, SIO_BASE_HANDLE, NULL, 0, (void *) &base_soc,
-		      sizeof (base_soc), &bret, NULL, NULL);
-      if (ret)
-	debug_printf ("WSAIoctl: %u", WSAGetLastError ());
-      else if (base_soc != soc)
-	{
-	  if (GetHandleInformation ((HANDLE) base_soc, &flags)
-	      && (flags & HANDLE_FLAG_INHERIT))
-	    {
-	      if (!DuplicateHandle (GetCurrentProcess (), (HANDLE) base_soc,
-				    GetCurrentProcess (), (PHANDLE) &base_soc,
-				    0, TRUE, DUPLICATE_SAME_ACCESS))
-		debug_printf ("DuplicateHandle failed, %E");
-	      else
-		{
-		  closesocket (soc);
-		  soc = base_soc;
-		  fixup = false;
-		}
-	    }
-	}
-    }
-  fd->set_io_handle ((HANDLE) soc);
-  if (!((fhandler_socket *) fd)->init_events ())
-    return false;
-  if (fixup)
-    ((fhandler_socket *) fd)->init_fixup_before ();
-  fd->set_flags (O_RDWR | O_BINARY);
-  debug_printf ("fd %d, name '%s', soc %p", (int) fd, dev->name (), soc);
-
-  /* Raise default buffer sizes (instead of WinSock default 8K).
-
-     64K appear to have the best size/performance ratio for a default
-     value.  Tested with ssh/scp on Vista over Gigabit LAN.
-
-     NOTE.  If the SO_RCVBUF size exceeds 65535(*), and if the socket is
-     connected to a remote machine, then calling WSADuplicateSocket on
-     fork/exec fails with WinSock error 10022, WSAEINVAL.  Fortunately
-     we don't use WSADuplicateSocket anymore, rather we just utilize
-     handle inheritance.  An explanation for this weird behaviour would
-     be nice, though.
-
-     NOTE 2.  Testing on x86_64 (Vista, 2008 R2, W8) indicates that
-     this is no problem on 64 bit.  So we set the default buffer size to
-     the default values in current 3.x Linux versions.
-
-     NOTE 3. Setting the window size to 65535 results in extremely bad
-     performance for apps that send data in multiples of Kb, as they
-     eventually end up sending 1 byte on the network and naggle + delay
-     ack kicks in. For example, iperf on a 10Gb network gives only 10
-     Mbits/sec with a 65535 send buffer. We want this to be a multiple
-     of 1k, but since 64k breaks WSADuplicateSocket we use 63Kb.
-
-     NOTE 4.  Tests with iperf uncover a problem in setting the SO_RCVBUF
-     and SO_SNDBUF sizes.  Windows is using autotuning since Windows Vista.
-     Manually setting SO_RCVBUF/SO_SNDBUF disables autotuning and leads to
-     inferior send/recv performance in scenarios with larger RTTs, as is
-     basically standard when accessing the internet.  For a discussion,
-     see https://cygwin.com/ml/cygwin-patches/2017-q1/msg00010.html.
-
-     (*) Maximum normal TCP window size.  Coincidence?  */
-#ifdef __x86_64__
-  ((fhandler_socket *) fd)->rmem () = 212992;
-  ((fhandler_socket *) fd)->wmem () = 212992;
-#else
-  ((fhandler_socket *) fd)->rmem () = 64512;
-  ((fhandler_socket *) fd)->wmem () = 64512;
-#endif
-#if 0 /* See NOTE 4 above. */
-  int size;
-
-  if (::setsockopt (soc, SOL_SOCKET, SO_RCVBUF,
-		    (char *) &((fhandler_socket *) fd)->rmem (), sizeof (int)))
-    {
-      debug_printf ("setsockopt(SO_RCVBUF) failed, %u", WSAGetLastError ());
-      if (::getsockopt (soc, SOL_SOCKET, SO_RCVBUF,
-			(char *) &((fhandler_socket *) fd)->rmem (),
-			(size = sizeof (int), &size)))
-	system_printf ("getsockopt(SO_RCVBUF) failed, %u", WSAGetLastError ());
-    }
-  if (::setsockopt (soc, SOL_SOCKET, SO_SNDBUF,
-		    (char *) &((fhandler_socket *) fd)->wmem (), sizeof (int)))
-    {
-      debug_printf ("setsockopt(SO_SNDBUF) failed, %u", WSAGetLastError ());
-      if (::getsockopt (soc, SOL_SOCKET, SO_SNDBUF,
-			(char *) &((fhandler_socket *) fd)->wmem (),
-			(size = sizeof (int), &size)))
-	system_printf ("getsockopt(SO_SNDBUF) failed, %u", WSAGetLastError ());
-    }
-#endif
-  /* A unique ID is necessary to recognize fhandler entries which are
-     duplicated by dup(2) or fork(2).  This is used in BSD flock calls
-     to identify the descriptor. */
-  ((fhandler_socket *) fd)->set_unique_id ();
-
-  return true;
-}
-
-/* exported as socket: standards? */
+/* exported as socket: POSIX.1-2001, POSIX.1-2008, 4.4BSD */
 extern "C" int
 cygwin_socket (int af, int type, int protocol)
 {
   int res = -1;
-  SOCKET soc = 0;
+  const device *dev;
+  fhandler_socket *fh;
 
   int flags = type & _SOCK_FLAG_MASK;
   type &= ~_SOCK_FLAG_MASK;
 
   debug_printf ("socket (%d, %d (flags %y), %d)", af, type, flags, protocol);
+
+  switch (af)
+    {
+    case AF_LOCAL:
+#ifndef __WITH_AF_UNIX
+      dev = af_local_dev;
+#else
+    case AF_UNIX:
+      dev = (af == AF_LOCAL) ? af_local_dev : af_unix_dev;
+#endif /* __WITH_AF_UNIX */
+      break;
+    case AF_INET:
+    case AF_INET6:
+      dev = af_inet_dev;
+      break;
+    default:
+      set_errno (EAFNOSUPPORT);
+      goto done;
+    }
 
   if ((flags & ~(SOCK_NONBLOCK | SOCK_CLOEXEC)) != 0)
     {
@@ -668,54 +525,22 @@ cygwin_socket (int af, int type, int protocol)
       goto done;
     }
 
-  soc = socket (af == AF_LOCAL ? AF_INET : af, type,
-		af == AF_LOCAL ? 0 : protocol);
-
-  if (soc == INVALID_SOCKET)
     {
-      set_winsock_errno ();
-      goto done;
+      cygheap_fdnew fd;
+
+      if (fd < 0)
+	goto done;
+      fh = (fhandler_socket *) build_fh_dev (*dev);
+      if (fh && fh->socket (af, type, protocol, flags) == 0)
+	{
+	  fd = fh;
+	  if (fd <= 2)
+	    set_std_handle (fd);
+	  res = fd;
+	}
+      else
+	delete fh;
     }
-
-  const device *dev;
-
-  if (af == AF_LOCAL)
-    dev = type == SOCK_STREAM ? stream_dev : dgram_dev;
-  else
-    dev = type == SOCK_STREAM ? tcp_dev : udp_dev;
-
-  {
-    cygheap_fdnew fd;
-    if (fd < 0 || !fdsock (fd, dev, soc))
-      closesocket (soc);
-    else
-      {
-	((fhandler_socket *) fd)->set_addr_family (af);
-	((fhandler_socket *) fd)->set_socket_type (type);
-	if (flags & SOCK_NONBLOCK)
-	  ((fhandler_socket *) fd)->set_nonblocking (true);
-	if (flags & SOCK_CLOEXEC)
-	  ((fhandler_socket *) fd)->set_close_on_exec (true);
-	if (type == SOCK_DGRAM)
-	  {
-	    /* Workaround the problem that a missing listener on a UDP socket
-	       in a call to sendto will result in select/WSAEnumNetworkEvents
-	       reporting that the socket has pending data and a subsequent call
-	       to recvfrom will return -1 with error set to WSAECONNRESET.
-
-	       This problem is a regression introduced in Windows 2000.
-	       Instead of fixing the problem, a new socket IOCTL code has
-	       been added, see http://support.microsoft.com/kb/263823 */
-	    BOOL cr = FALSE;
-	    DWORD blen;
-	    if (WSAIoctl (soc, SIO_UDP_CONNRESET, &cr, sizeof cr, NULL, 0,
-			  &blen, NULL, NULL) == SOCKET_ERROR)
-	      debug_printf ("Reset SIO_UDP_CONNRESET: WinSock error %u",
-			    WSAGetLastError ());
-	  }
-	res = fd;
-      }
-  }
 
 done:
   syscall_printf ("%R = socket(%d, %d (flags %y), %d)",
@@ -723,7 +548,7 @@ done:
   return res;
 }
 
-/* exported as sendto: standards? */
+/* exported as sendto: 4.4BSD, SVr4, POSIX.1-2001 */
 extern "C" ssize_t
 cygwin_sendto (int fd, const void *buf, size_t len, int flags,
 	       const struct sockaddr *to, socklen_t tolen)
@@ -745,7 +570,7 @@ cygwin_sendto (int fd, const void *buf, size_t len, int flags,
   return res;
 }
 
-/* exported as recvfrom: standards? */
+/* exported as recvfrom: 4.4BSD, SVr4, POSIX.1-2001 */
 extern "C" ssize_t
 cygwin_recvfrom (int fd, void *buf, size_t len, int flags,
 		 struct sockaddr *from, socklen_t *fromlen)
@@ -771,215 +596,44 @@ cygwin_recvfrom (int fd, void *buf, size_t len, int flags,
   return res;
 }
 
-static int
-convert_ws1_ip_optname (int optname)
-{
-  static int ws2_optname[] =
-  {
-    0,
-    IP_OPTIONS,
-    IP_MULTICAST_IF,
-    IP_MULTICAST_TTL,
-    IP_MULTICAST_LOOP,
-    IP_ADD_MEMBERSHIP,
-    IP_DROP_MEMBERSHIP,
-    IP_TTL,
-    IP_TOS,
-    IP_DONTFRAGMENT
-  };
-  return (optname < 1 || optname > _WS1_IP_DONTFRAGMENT)
-	 ? optname
-	 : ws2_optname[optname];
-}
-
-/* exported as setsockopt: standards? */
+/* exported as setsockopt: POSIX.1-2001,  POSIX.1-2008,  SVr4,  4.4BSD */
 extern "C" int
 cygwin_setsockopt (int fd, int level, int optname, const void *optval,
 		   socklen_t optlen)
 {
-  int res = -1;
+  int ret = -1;
 
   __try
     {
       fhandler_socket *fh = get (fd);
-      if (!fh)
-	__leave;
-
-      /* Switch off the AF_LOCAL handshake and thus SO_PEERCRED handling
-	 for AF_LOCAL/SOCK_STREAM sockets.  This allows to handle special
-	 situations in which connect is called before a listening socket
-	 accepts connections.
-	 FIXME: In the long run we should find a more generic solution which
-	 doesn't require a blocking handshake in accept/connect to exchange
-	 SO_PEERCRED credentials. */
-      if (level == SOL_SOCKET && optname == SO_PEERCRED)
-	{
-	  if (optval || optlen)
-	    set_errno (EINVAL);
-	  else
-	    res = fh->af_local_set_no_getpeereid ();
-	  __leave;
-	}
-
-      /* Old applications still use the old WinSock1 IPPROTO_IP values. */
-      if (level == IPPROTO_IP && CYGWIN_VERSION_CHECK_FOR_USING_WINSOCK1_VALUES)
-	optname = convert_ws1_ip_optname (optname);
-
-      /* Per POSIX we must not be able to reuse a complete duplicate of a
-	 local TCP address (same IP, same port), even if SO_REUSEADDR has been
-	 set.  That's unfortunately possible in WinSock, and this has never
-	 been changed to maintain backward compatibility.  Instead, the
-	 SO_EXCLUSIVEADDRUSE option has been added to allow an application to
-	 request POSIX standard behaviour in the non-SO_REUSEADDR case.
-
-	 However, the WinSock standard behaviour of stream socket binding
-	 is equivalent to the POSIX behaviour as if SO_REUSEADDR has been set.
-	 So what we do here is to note that SO_REUSEADDR has been set, but not
-	 actually hand over the request to WinSock.  This is tested in
-	 fhandler_socket::bind(), so that SO_EXCLUSIVEADDRUSE can be set if
-	 the application did not set SO_REUSEADDR.  This should reflect the
-	 POSIX socket binding behaviour as close as possible with WinSock. */
-      if (level == SOL_SOCKET && optname == SO_REUSEADDR
-	  && fh->get_socket_type () == SOCK_STREAM)
-	res = 0;
-      else
-	res = setsockopt (fh->get_socket (), level, optname,
-			  (const char *) optval, optlen);
-
-      if (optlen == sizeof (int))
-	syscall_printf ("setsockopt optval=%x", *(int *) optval);
-
-      if (res)
-	{
-	  /* KB 248611:
-
-	     Windows 2000 and above don't support setting the IP_TOS field
-	     with setsockopt.  Additionally, TOS was always (also under 9x
-	     and NT) only implemented for UDP and ICMP, never for TCP.
-
-	     The difference is that beginning with Windows 2000 the
-	     setsockopt call returns WinSock error 10022, WSAEINVAL when
-	     trying to set the IP_TOS field, instead of just ignoring the
-	     call.  This is *not* explained in KB 248611, but only in KB
-	     258978.
-
-	     Either case, the official workaround is to add a new registry
-	     DWORD value HKLM/System/CurrentControlSet/Services/Tcpip/...
-	     ...  Parameters/DisableUserTOSSetting, set to 0, and reboot.
-
-	     Sidenote: The reasoning for dropping ToS in Win2K is that ToS
-	     per RFC 1349 is incompatible with DiffServ per RFC 2474/2475.
-
-	     We just ignore the return value of setting IP_TOS entirely.
-	     
-	     CV 2014-04-16: Same for IPV6_TCLASS
-	     FIXME:         Same for IPV6_RECVTCLASS? */
-	  if (level == IPPROTO_IP && optname == IP_TOS
-	      && WSAGetLastError () == WSAEINVAL)
-	    {
-	      debug_printf ("Faked IP_TOS success");
-	      res = 0;
-	    }
-	  else if (level == IPPROTO_IPV6 && optname == IPV6_TCLASS
-		   && WSAGetLastError () == WSAENOPROTOOPT)
-	    {
-	      debug_printf ("Faked IPV6_TCLASS success");
-	      res = 0;
-	    }
-	  else
-	    set_winsock_errno ();
-	}
-      else if (level == SOL_SOCKET)
-	switch (optname)
-	  {
-	  case SO_REUSEADDR:
-	    fh->saw_reuseaddr (*(int *) optval);
-	    break;
-	  case SO_RCVBUF:
-	    fh->rmem (*(int *) optval);
-	    break;
-	  case SO_SNDBUF:
-	    fh->wmem (*(int *) optval);
-	    break;
-	  default:
-	    break;
-	  }
+      if (fh)
+	ret = fh->setsockopt (level, optname, optval, optlen);
     }
-  __except (EFAULT)
-    {
-      res = -1;
-    }
+  __except (EFAULT) {}
   __endtry
   syscall_printf ("%R = setsockopt(%d, %d, %y, %p, %d)",
-		  res, fd, level, optname, optval, optlen);
-  return res;
+                  ret, fd, level, optname, optval, optlen);
+  return ret;
 }
 
-/* exported as getsockopt: standards? */
+/* exported as getsockopt: POSIX.1-2001,  POSIX.1-2008,  SVr4,  4.4BSD */
 extern "C" int
 cygwin_getsockopt (int fd, int level, int optname, void *optval,
 		   socklen_t *optlen)
 {
-  int res = -1;
+  int ret = -1;
 
   __try
     {
       fhandler_socket *fh = get (fd);
-      if (!fh)
-	__leave;
-      if (optname == SO_PEERCRED && level == SOL_SOCKET)
-	{
-	  struct ucred *cred = (struct ucred *) optval;
-	  res = fh->getpeereid (&cred->pid, &cred->uid, &cred->gid);
-	  __leave;
-	}
-      else if (optname == SO_REUSEADDR && level == SOL_SOCKET)
-	{
-	  unsigned int *reuseaddr = (unsigned int *) optval;
-	  *reuseaddr = fh->saw_reuseaddr();
-	  *optlen = sizeof *reuseaddr;
-	  res = 0;
-	  __leave;
-	}
-      /* Old applications still use the old WinSock1 IPPROTO_IP values. */
-      if (level == IPPROTO_IP && CYGWIN_VERSION_CHECK_FOR_USING_WINSOCK1_VALUES)
-	optname = convert_ws1_ip_optname (optname);
-      res = getsockopt (fh->get_socket (), level, optname, (char *) optval,
-			(int *) optlen);
-      if (res == SOCKET_ERROR)
-	set_winsock_errno ();
-      else if (level == SOL_SOCKET && optname == SO_ERROR)
-	{
-	  int *e = (int *) optval;
-	  debug_printf ("WinSock SO_ERROR = %d", *e);
-	  *e = find_winsock_errno (*e);
-	}
-      else if (*optlen == 1)
-	{
-	  /* Regression in Vista and later:  instead of a 4 byte BOOL value,
-	     a 1 byte BOOLEAN value is returned, in contrast to older systems
-	     and the documentation.  Since an int type is expected by the
-	     calling application, we convert the result here.  For some reason
-	     only three BSD-compatible socket options seem to be affected. */
-	  if ((level == SOL_SOCKET
-	       && (optname == SO_KEEPALIVE || optname == SO_DONTROUTE))
-	      || (level == IPPROTO_TCP && optname == TCP_NODELAY))
-	    {
-	      BOOLEAN *in = (BOOLEAN *) optval;
-	      int *out = (int *) optval;
-	      *out = *in;
-	      *optlen = 4;
-	    }
-	}
+      if (fh)
+	ret = fh->getsockopt (level, optname, optval, optlen);
     }
-  __except (EFAULT)
-    {
-      res = -1;
-    }
+  __except (EFAULT) {}
   __endtry
   syscall_printf ("%R = getsockopt(%d, %d, %y, %p, %p)",
-		  res, fd, level, optname, optval, optlen);
-  return res;
+                  ret, fd, level, optname, optval, optlen);
+  return ret;
 }
 
 /* POSIX.1-2001 */
@@ -1004,7 +658,7 @@ getpeereid (int fd, uid_t *euid, gid_t *egid)
   return -1;
 }
 
-/* exported as connect: standards? */
+/* exported as connect: POSIX.1-2001, POSIX.1-2008, SVr4, 4.4BSD */
 extern "C" int
 cygwin_connect (int fd, const struct sockaddr *name, socklen_t namelen)
 {
@@ -1024,7 +678,7 @@ cygwin_connect (int fd, const struct sockaddr *name, socklen_t namelen)
   return res;
 }
 
-/* exported as getservbyname: standards? */
+/* exported as getservbyname: POSIX.1-2001, POSIX.1-2008, 4.3BSD */
 extern "C" struct servent *
 cygwin_getservbyname (const char *name, const char *proto)
 {
@@ -1040,7 +694,7 @@ cygwin_getservbyname (const char *name, const char *proto)
   return res;
 }
 
-/* exported as getservbyport: standards? */
+/* exported as getservbyport: POSIX.1-2001, POSIX.1-2008, 4.3BSD */
 extern "C" struct servent *
 cygwin_getservbyport (int port, const char *proto)
 {
@@ -1059,30 +713,24 @@ cygwin_getservbyport (int port, const char *proto)
 extern "C" int
 cygwin_gethostname (char *name, size_t len)
 {
-  int res = -1;
-
   __try
     {
-      if (gethostname (name, len))
-	{
-	  DWORD local_len = len;
+      PFIXED_INFO info = NULL;
+      ULONG size = 0;
 
-	  if (!GetComputerNameExA (ComputerNameDnsFullyQualified, name,
-				   &local_len))
-	    {
-	      if (GetLastError () == ERROR_MORE_DATA)
-		set_errno (ENAMETOOLONG);
-	      else
-		set_winsock_errno ();
-	      __leave;
-	    }
+      if (GetNetworkParams(info, &size) == ERROR_BUFFER_OVERFLOW
+	  && (info = (PFIXED_INFO) alloca(size))
+	  && GetNetworkParams(info, &size) == ERROR_SUCCESS)
+	{
+	  strncpy(name, info->HostName, len);
+	  debug_printf ("gethostname %s", name);
+	  return 0;
 	}
-      debug_printf ("name %s", name);
-      res = 0;
+      __seterrno ();
     }
-  __except (EFAULT) {}
+  __except (EFAULT)
   __endtry
-  return res;
+  return -1;
 }
 
 extern "C" int
@@ -1099,7 +747,31 @@ sethostname (const char *name, size_t len)
   return 0;
 }
 
-/* exported as gethostbyname: standards? */
+/* getdomainname: 4.4BSD */
+extern "C" int
+getdomainname (char *domain, size_t len)
+{
+  __try
+    {
+      PFIXED_INFO info = NULL;
+      ULONG size = 0;
+
+      if (GetNetworkParams(info, &size) == ERROR_BUFFER_OVERFLOW
+	  && (info = (PFIXED_INFO) alloca(size))
+	  && GetNetworkParams(info, &size) == ERROR_SUCCESS)
+	{
+	  strncpy(domain, info->DomainName, len);
+	  debug_printf ("gethostname %s", domain);
+	  return 0;
+	}
+      __seterrno ();
+    }
+  __except (EFAULT)
+  __endtry
+  return -1;
+}
+
+/* exported as gethostbyname: POSIX.1-2001 */
 extern "C" struct hostent *
 cygwin_gethostbyname (const char *name)
 {
@@ -1150,7 +822,7 @@ cygwin_gethostbyname (const char *name)
   return res;
 }
 
-/* exported as gethostbyaddr: standards? */
+/* exported as gethostbyaddr: POSIX.1-2001 */
 extern "C" struct hostent *
 cygwin_gethostbyaddr (const void *addr, socklen_t len, int type)
 {
@@ -1489,7 +1161,7 @@ corrupted:
   return NULL;
 }
 
-/* gethostbyname2: standards? */
+/* gethostbyname2: GNU extension */
 extern "C" struct hostent *
 gethostbyname2 (const char *name, int af)
 {
@@ -1530,7 +1202,7 @@ gethostbyname2 (const char *name, int af)
   return res;
 }
 
-/* exported as accept: standards? */
+/* exported as accept: POSIX.1-2001,  POSIX.1-2008,  SVr4,  4.4BSD */
 extern "C" int
 cygwin_accept (int fd, struct sockaddr *peer, socklen_t *len)
 {
@@ -1551,6 +1223,7 @@ cygwin_accept (int fd, struct sockaddr *peer, socklen_t *len)
   return res;
 }
 
+/* accept4: GNU extension */
 extern "C" int
 accept4 (int fd, struct sockaddr *peer, socklen_t *len, int flags)
 {
@@ -1574,7 +1247,7 @@ accept4 (int fd, struct sockaddr *peer, socklen_t *len, int flags)
   return res;
 }
 
-/* exported as bind: standards? */
+/* exported as bind: POSIX.1-2001, POSIX.1-2008, SVr4,  4.4BSD */
 extern "C" int
 cygwin_bind (int fd, const struct sockaddr *my_addr, socklen_t addrlen)
 {
@@ -1592,7 +1265,7 @@ cygwin_bind (int fd, const struct sockaddr *my_addr, socklen_t addrlen)
   return res;
 }
 
-/* exported as getsockname: standards? */
+/* exported as getsockname: POSIX.1-2001, POSIX.1-2008, SVr4,  4.4BSD */
 extern "C" int
 cygwin_getsockname (int fd, struct sockaddr *addr, socklen_t *namelen)
 {
@@ -1610,7 +1283,7 @@ cygwin_getsockname (int fd, struct sockaddr *addr, socklen_t *namelen)
   return res;
 }
 
-/* exported as listen: standards? */
+/* exported as listen: POSIX.1-2001, POSIX.1-2008, SVr4,  4.4BSD */
 extern "C" int
 cygwin_listen (int fd, int backlog)
 {
@@ -1628,7 +1301,7 @@ cygwin_listen (int fd, int backlog)
   return res;
 }
 
-/* exported as shutdown: standards? */
+/* exported as shutdown: POSIX.1-2001, POSIX.1-2008, SVr4,  4.4BSD */
 extern "C" int
 cygwin_shutdown (int fd, int how)
 {
@@ -1691,7 +1364,7 @@ cygwin_herror (const char *s)
   __endtry
 }
 
-/* exported as getpeername: standards? */
+/* exported as getpeername: POSIX.1-2001, POSIX.1-2008, SVr4,  4.4BSD */
 extern "C" int
 cygwin_getpeername (int fd, struct sockaddr *name, socklen_t *len)
 {
@@ -1706,12 +1379,11 @@ cygwin_getpeername (int fd, struct sockaddr *name, socklen_t *len)
     }
   __except (EFAULT) {}
   __endtry
-  syscall_printf ("%R = getpeername(%d) %p", res, fd,
-  		  (fh ? fh->get_socket () : (SOCKET) -1));
+  syscall_printf ("%R = getpeername(%d)", res, fd);
   return res;
 }
 
-/* exported as recv: standards? */
+/* exported as recv: POSIX.1-2001, POSIX.1-2008, SVr4,  4.4BSD */
 extern "C" ssize_t
 cygwin_recv (int fd, void *buf, size_t len, int flags)
 {
@@ -1735,7 +1407,7 @@ cygwin_recv (int fd, void *buf, size_t len, int flags)
   return res;
 }
 
-/* exported as send: standards? */
+/* exported as send: POSIX.1-2001, POSIX.1-2008, SVr4,  4.4BSD */
 extern "C" ssize_t
 cygwin_send (int fd, const void *buf, size_t len, int flags)
 {
@@ -1753,29 +1425,6 @@ cygwin_send (int fd, const void *buf, size_t len, int flags)
   __endtry
   syscall_printf ("%lR = send(%d, %p, %ld, %y)", res, fd, buf, len, flags);
   return res;
-}
-
-/* getdomainname: standards? */
-extern "C" int
-getdomainname (char *domain, size_t len)
-{
-  __try
-    {
-      PFIXED_INFO info = NULL;
-      ULONG size = 0;
-
-      if (GetNetworkParams(info, &size) == ERROR_BUFFER_OVERFLOW
-	  && (info = (PFIXED_INFO) alloca(size))
-	  && GetNetworkParams(info, &size) == ERROR_SUCCESS)
-	{
-	  strncpy(domain, info->DomainName, len);
-	  return 0;
-	}
-      __seterrno ();
-    }
-  __except (EFAULT)
-  __endtry
-  return -1;
 }
 
 /* Fill out an ifconf struct. */
@@ -1971,7 +1620,7 @@ get_ipv4fromreg (struct ifall *ifp, const char *name, DWORD idx)
 	{ \
 	  char t[64]; \
 	  sys_wcstombs (t, 64, (u)); \
-	  cygwin_inet_aton (t, (a)); \
+	  cygwin_inet_pton (AF_INET, t, (a)); \
 	}
       /* If DHCP is used, we have only one address. */
       if (dhcp)
@@ -2461,15 +2110,75 @@ if_freenameindex (struct if_nameindex *ptr)
 #define PORT_HIGH	(IPPORT_RESERVED - 1)
 #define NUM_PORTS	(PORT_HIGH - PORT_LOW + 1)
 
+/* port is in host byte order */
+static in_port_t
+next_free_port (sa_family_t family, in_port_t in_port)
+{
+  DWORD ret;
+  ULONG size = 0;
+  char *tab = NULL;
+  PMIB_TCPTABLE tab4 = NULL;
+  PMIB_TCP6TABLE tab6 = NULL;
+
+  /* Start testing with incoming port number. */
+  in_port_t tst_port = in_port;
+  in_port_t res_port = 0;
+  in_port_t tab_port;
+
+  do
+    {
+      if (family == AF_INET)
+	ret = GetTcpTable ((PMIB_TCPTABLE) tab, &size, TRUE);
+      else
+	ret = GetTcp6Table ((PMIB_TCP6TABLE) tab, &size, TRUE);
+
+      if (ret == ERROR_INSUFFICIENT_BUFFER)
+	tab = (char *) realloc (tab, size);
+    }
+  while (ret == ERROR_INSUFFICIENT_BUFFER);
+
+  tab4 = (PMIB_TCPTABLE) tab;
+  tab6 = (PMIB_TCP6TABLE) tab;
+
+  /* dwNumEntries has offset 0 in both structs. */
+  for (int idx = tab4->dwNumEntries - 1; idx >= 0; --idx)
+    {
+      if (family == AF_INET)
+	tab_port = ntohs (tab4->table[idx].dwLocalPort);
+      else
+	tab_port = ntohs (tab6->table[idx].dwLocalPort);
+      /* Skip table entries with too high port number. */
+      if (tab_port > tst_port)
+	continue;
+      /* Is the current port number free? */
+      if (tab_port < tst_port)
+	{
+	  res_port = tst_port;
+	  break;
+	}
+      /* Decrement port and handle underflow of the reserved area. */
+      if (--tst_port < PORT_LOW)
+	{
+	  tst_port = PORT_HIGH;
+	  idx = tab4->dwNumEntries;
+	}
+      /* Check if we're round to the incoming port. */
+      if (tst_port == in_port)
+	break;
+    }
+  free (tab);
+  return res_port;
+}
+
 extern "C" int
 cygwin_bindresvport_sa (int fd, struct sockaddr *sa)
 {
   struct sockaddr_storage sst;
   struct sockaddr_in *sin = NULL;
   struct sockaddr_in6 *sin6 = NULL;
-  in_port_t port;
   socklen_t salen;
   int ret = -1;
+  LONG port, next_port;
 
   __try
     {
@@ -2483,48 +2192,59 @@ cygwin_bindresvport_sa (int fd, struct sockaddr *sa)
 	  memset (&sst, 0, sizeof sst);
 	  sa->sa_family = fh->get_addr_family ();
 	}
+      else if (sa->sa_family != fh->get_addr_family ())
+	{
+	  set_errno (EPFNOSUPPORT);
+	  __leave;
+	}
 
       switch (sa->sa_family)
 	{
 	case AF_INET:
 	  salen = sizeof (struct sockaddr_in);
 	  sin = (struct sockaddr_in *) sa;
-	  port = sin->sin_port;
 	  break;
 	case AF_INET6:
 	  salen = sizeof (struct sockaddr_in6);
 	  sin6 = (struct sockaddr_in6 *) sa;
-	  port = sin6->sin6_port;
 	  break;
 	default:
 	  set_errno (EPFNOSUPPORT);
 	  __leave;
 	}
 
-      /* If a non-zero port number is given, try this first.  If that succeeds,
-	 or if the error message is serious, return. */
-      if (port)
-	{
-	  ret = fh->bind (sa, salen);
-	  if (!ret || (get_errno () != EADDRINUSE && get_errno () != EINVAL))
-	    __leave;
-	}
+      /* Originally we tried to use the incoming port number first here,
+	 but that may lead to EADDRINUSE scenarios when calling bindresvport
+	 on the client side.  So we ignore any port value that the caller
+	 supplies, just like glibc. */
 
-      LONG myport;
-
+      /* Note that repeating this loop NUM_PORTS times is arbitrary.  The
+         job is mainly done by next_free_port() but it doesn't cover bound
+	 sockets.  And calling and checking GetTcpTable and subsequently
+	 calling bind is inevitably racy.  We have to continue if bind fails
+	 with EADDRINUSE. */
       for (int i = 0; i < NUM_PORTS; i++)
 	{
-	  while ((myport = InterlockedExchange (
+	  while ((port = InterlockedExchange (
 			    &cygwin_shared->last_used_bindresvport, -1)) == -1)
 	    yield ();
-	  if (myport == 0 || --myport < PORT_LOW)
-	    myport = PORT_HIGH;
-	  InterlockedExchange (&cygwin_shared->last_used_bindresvport, myport);
-
+	  next_port = port;
+	  if (next_port == 0 || --next_port < PORT_LOW)
+	    next_port = PORT_HIGH;
+	  /* Returns 0 if no reserved port is free. */
+	  next_port = next_free_port (sa->sa_family, next_port);
+	  if (next_port)
+	    port = next_port;
+	  InterlockedExchange (&cygwin_shared->last_used_bindresvport, port);
+	  if (next_port == 0)
+	    {
+	      set_errno (EADDRINUSE);
+	      break;
+	    }
 	  if (sa->sa_family == AF_INET6)
-	    sin6->sin6_port = htons (myport);
+	    sin6->sin6_port = htons (port);
 	  else
-	    sin->sin_port = htons (myport);
+	    sin->sin_port = htons (port);
 	  if (!(ret = fh->bind (sa, salen)))
 	    break;
 	  if (get_errno () != EADDRINUSE && get_errno () != EINVAL)
@@ -2537,224 +2257,105 @@ cygwin_bindresvport_sa (int fd, struct sockaddr *sa)
   return ret;
 }
 
-
 extern "C" int
 cygwin_bindresvport (int fd, struct sockaddr_in *sin)
 {
+  if (sin && sin->sin_family != AF_INET)
+    {
+      set_errno (EAFNOSUPPORT);
+      return -1;
+    }
   return cygwin_bindresvport_sa (fd, (struct sockaddr *) sin);
 }
 
-/* socketpair: standards? */
-/* Win32 supports AF_INET only, so ignore domain and protocol arguments */
+/* socketpair: POSIX.1-2001, POSIX.1-2008, 4.4BSD. */
 extern "C" int
-socketpair (int family, int type, int protocol, int *sb)
+socketpair (int af, int type, int protocol, int sv[2])
 {
   int res = -1;
-  SOCKET insock = INVALID_SOCKET;
-  SOCKET outsock = INVALID_SOCKET;
-  SOCKET newsock = INVALID_SOCKET;
-  struct sockaddr_in sock_in, sock_out;
-  int len;
+  const device *dev;
+  fhandler_socket *fh_in, *fh_out;
 
-  __try
+  int flags = type & _SOCK_FLAG_MASK;
+  type &= ~_SOCK_FLAG_MASK;
+
+  debug_printf ("socket (%d, %d (flags %y), %d)", af, type, flags, protocol);
+
+  switch (af)
     {
-      int flags = type & _SOCK_FLAG_MASK;
-      type &= ~_SOCK_FLAG_MASK;
+    case AF_LOCAL:
+#ifndef __WITH_AF_UNIX
+      dev = af_local_dev;
+#else
+    case AF_UNIX:
+      dev = (af == AF_LOCAL) ? af_local_dev : af_unix_dev;
+#endif /* __WITH_AF_UNIX */
+      break;
+    default:
+      set_errno (EAFNOSUPPORT);
+      goto done;
+    }
 
-      if (family != AF_LOCAL && family != AF_INET)
-	{
-	  set_errno (EAFNOSUPPORT);
-	  __leave;
-	}
-      if (type != SOCK_STREAM && type != SOCK_DGRAM)
-	{
-	  set_errno (EPROTOTYPE);
-	  __leave;
-	}
-      if ((flags & ~(SOCK_NONBLOCK | SOCK_CLOEXEC)) != 0)
-	{
-	  set_errno (EINVAL);
-	  __leave;
-	}
-      if ((family == AF_LOCAL && protocol != PF_UNSPEC && protocol != PF_LOCAL)
-	  || (family == AF_INET && protocol != PF_UNSPEC && protocol != PF_INET))
-	{
-	  set_errno (EPROTONOSUPPORT);
-	  __leave;
-	}
+  if ((flags & ~(SOCK_NONBLOCK | SOCK_CLOEXEC)) != 0)
+    {
+      set_errno (EINVAL);
+      goto done;
+    }
 
-      /* create the first socket */
-      newsock = socket (AF_INET, type, 0);
-      if (newsock == INVALID_SOCKET)
-	{
-	  debug_printf ("first socket call failed");
-	  set_winsock_errno ();
-	  __leave;
-	}
+    {
+      cygheap_fdnew fd_in;
+      if (fd_in < 0)
+	goto done;
 
-      /* bind the socket to any unused port */
-      sock_in.sin_family = AF_INET;
-      sock_in.sin_port = 0;
-      sock_in.sin_addr.s_addr = htonl (INADDR_LOOPBACK);
-      if (bind (newsock, (struct sockaddr *) &sock_in, sizeof (sock_in)) < 0)
-	{
-	  debug_printf ("bind failed");
-	  set_winsock_errno ();
-	  __leave;
-	}
-      len = sizeof (sock_in);
-      if (getsockname (newsock, (struct sockaddr *) &sock_in, &len) < 0)
-	{
-	  debug_printf ("getsockname error");
-	  set_winsock_errno ();
-	  __leave;
-	}
+      cygheap_fdnew fd_out (fd_in, false);
+      if (fd_out < 0)
+	goto done;
 
-      /* For stream sockets, create a listener */
-      if (type == SOCK_STREAM)
-	listen (newsock, 2);
-
-      /* create a connecting socket */
-      outsock = socket (AF_INET, type, 0);
-      if (outsock == INVALID_SOCKET)
+      fh_in = reinterpret_cast<fhandler_socket *> (build_fh_dev (*dev));
+      fh_out = reinterpret_cast<fhandler_socket *> (build_fh_dev (*dev));
+      if (fh_in && fh_out
+	  && fh_in->socketpair (af, type, protocol, flags, fh_out) == 0)
 	{
-	  debug_printf ("second socket call failed");
-	  set_winsock_errno ();
-	  __leave;
-	}
-
-      /* For datagram sockets, bind the 2nd socket to an unused address, too */
-      if (type == SOCK_DGRAM)
-	{
-	  sock_out.sin_family = AF_INET;
-	  sock_out.sin_port = 0;
-	  sock_out.sin_addr.s_addr = htonl (INADDR_LOOPBACK);
-	  if (bind (outsock, (struct sockaddr *) &sock_out, sizeof (sock_out)) < 0)
+	  fd_in = fh_in;
+	  fd_out = fh_out;
+	  if (fd_in <= 2)
+	    set_std_handle (fd_in);
+	  if (fd_out <= 2)
+	    set_std_handle (fd_out);
+	  __try
 	    {
-	      debug_printf ("bind failed");
-	      set_winsock_errno ();
-	      __leave;
-	    }
-	  len = sizeof (sock_out);
-	  if (getsockname (outsock, (struct sockaddr *) &sock_out, &len) < 0)
-	    {
-	      debug_printf ("getsockname error");
-	      set_winsock_errno ();
-	      __leave;
-	    }
-	}
-
-      /* Force IP address to loopback */
-      sock_in.sin_addr.s_addr = htonl (INADDR_LOOPBACK);
-      if (type == SOCK_DGRAM)
-	sock_out.sin_addr.s_addr = htonl (INADDR_LOOPBACK);
-
-      /* Do a connect */
-      if (connect (outsock, (struct sockaddr *) &sock_in, sizeof (sock_in)) < 0)
-	{
-	  debug_printf ("connect error");
-	  set_winsock_errno ();
-	  __leave;
-	}
-
-      if (type == SOCK_STREAM)
-	{
-	  /* For stream sockets, accept the connection and close the listener */
-	  len = sizeof (sock_in);
-	  insock = accept (newsock, (struct sockaddr *) &sock_in, &len);
-	  if (insock == INVALID_SOCKET)
-	    {
-	      debug_printf ("accept error");
-	      set_winsock_errno ();
-	      __leave;
-	    }
-	  closesocket (newsock);
-	  newsock = INVALID_SOCKET;
-	}
-      else
-	{
-	  /* For datagram sockets, connect the 2nd socket */
-	  if (connect (newsock, (struct sockaddr *) &sock_out,
-		       sizeof (sock_out)) < 0)
-	    {
-	      debug_printf ("connect error");
-	      set_winsock_errno ();
-	      __leave;
-	    }
-	  insock = newsock;
-	  newsock = INVALID_SOCKET;
-	}
-
-      cygheap_fdnew sb0;
-      const device *dev;
-
-      if (family == AF_INET)
-	dev = (type == SOCK_STREAM ? tcp_dev : udp_dev);
-      else
-	dev = (type == SOCK_STREAM ? stream_dev : dgram_dev);
-
-      if (sb0 >= 0 && fdsock (sb0, dev, insock))
-	{
-	  ((fhandler_socket *) sb0)->set_addr_family (family);
-	  ((fhandler_socket *) sb0)->set_socket_type (type);
-	  ((fhandler_socket *) sb0)->connect_state (connected);
-	  if (flags & SOCK_NONBLOCK)
-	    ((fhandler_socket *) sb0)->set_nonblocking (true);
-	  if (flags & SOCK_CLOEXEC)
-	    ((fhandler_socket *) sb0)->set_close_on_exec (true);
-	  if (family == AF_LOCAL && type == SOCK_STREAM)
-	    ((fhandler_socket *) sb0)->af_local_set_sockpair_cred ();
-
-	  cygheap_fdnew sb1 (sb0, false);
-
-	  if (sb1 >= 0 && fdsock (sb1, dev, outsock))
-	    {
-	      ((fhandler_socket *) sb1)->set_addr_family (family);
-	      ((fhandler_socket *) sb1)->set_socket_type (type);
-	      ((fhandler_socket *) sb1)->connect_state (connected);
-	      if (flags & SOCK_NONBLOCK)
-		((fhandler_socket *) sb1)->set_nonblocking (true);
-	      if (flags & SOCK_CLOEXEC)
-		((fhandler_socket *) sb1)->set_close_on_exec (true);
-	      if (family == AF_LOCAL && type == SOCK_STREAM)
-		((fhandler_socket *) sb1)->af_local_set_sockpair_cred ();
-
-	      sb[0] = sb0;
-	      sb[1] = sb1;
+	      sv[0] = fd_in;
+	      sv[1] = fd_out;
 	      res = 0;
 	    }
-	  else
-	    sb0.release ();
+	  __except (EFAULT) {}
+	  __endtry
+	}
+      else
+	{
+	  delete fh_in;
+	  delete fh_out;
 	}
     }
-  __except (EFAULT) {}
-  __endtry
+
+done:
   syscall_printf ("%R = socketpair(...)", res);
-  if (res == -1)
-    {
-      if (insock != INVALID_SOCKET)
-	closesocket (insock);
-      if (outsock != INVALID_SOCKET)
-	closesocket (outsock);
-      if (newsock != INVALID_SOCKET)
-	closesocket (newsock);
-    }
   return res;
 }
 
-/* sethostent: standards? */
+/* sethostent: POSIX.1-2001 */
 extern "C" void
 sethostent (int)
 {
 }
 
-/* endhostent: standards? */
+/* endhostent: POSIX.1-2001 */
 extern "C" void
 endhostent (void)
 {
 }
 
-/* exported as recvmsg: standards? */
+/* exported as recvmsg: POSIX.1-2001, POSIX.1-2008, 4.4BSD */
 extern "C" ssize_t
 cygwin_recvmsg (int fd, struct msghdr *msg, int flags)
 {
@@ -2785,7 +2386,7 @@ cygwin_recvmsg (int fd, struct msghdr *msg, int flags)
   return res;
 }
 
-/* exported as sendmsg: standards? */
+/* exported as sendmsg: POSIX.1-2001, POSIX.1-2008, 4.4BSD */
 extern "C" ssize_t
 cygwin_sendmsg (int fd, const struct msghdr *msg, int flags)
 {
@@ -3177,6 +2778,7 @@ cygwin_inet_ntop (int af, const void *src, char *dst, socklen_t size)
   /* NOTREACHED */
 }
 
+/* Exported as freeaddrinfo: POSIX.1-2001, POSIX.1-2008, RFC 2553 */
 extern "C" void
 cygwin_freeaddrinfo (struct addrinfo *addr)
 {
@@ -3335,6 +2937,7 @@ static struct gai_errmap_t
   {0,			  "Parameter string not correctly encoded"}
 };
 
+/* Exported as gai_strerror: POSIX.1-2001, POSIX.1-2008 */
 extern "C" const char *
 cygwin_gai_strerror (int err)
 {
@@ -3353,6 +2956,7 @@ w32_to_gai_err (int w32_err)
   return w32_err;
 }
 
+/* Exported as getaddrinfo: POSIX.1-2001, POSIX.1-2008, RFC 2553 */
 extern "C" int
 cygwin_getaddrinfo (const char *hostname, const char *servname,
 		    const struct addrinfo *hints, struct addrinfo **res)
@@ -3475,6 +3079,7 @@ cygwin_getaddrinfo (const char *hostname, const char *servname,
   return ret;
 }
 
+/* Exported as getnameinfo: POSIX.1-2001, POSIX.1-2008, RFC 2553 */
 extern "C" int
 cygwin_getnameinfo (const struct sockaddr *sa, socklen_t salen,
 		    char *host, size_t hostlen, char *serv,
@@ -3558,28 +3163,28 @@ cygwin_getnameinfo (const struct sockaddr *sa, socklen_t salen,
 #undef htons
 #undef ntohs
 
-/* htonl: standards? */
+/* htonl: POSIX.1-2001, POSIX.1-2008 */
 extern "C" uint32_t
 htonl (uint32_t x)
 {
   return __htonl (x);
 }
 
-/* ntohl: standards? */
+/* ntohl: POSIX.1-2001, POSIX.1-2008 */
 extern "C" uint32_t
 ntohl (uint32_t x)
 {
   return __ntohl (x);
 }
 
-/* htons: standards? */
+/* htons: POSIX.1-2001, POSIX.1-2008 */
 extern "C" uint16_t
 htons (uint16_t x)
 {
   return __htons (x);
 }
 
-/* ntohs: standards? */
+/* ntohs: POSIX.1-2001, POSIX.1-2008 */
 extern "C" uint16_t
 ntohs (uint16_t x)
 {

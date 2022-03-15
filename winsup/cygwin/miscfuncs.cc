@@ -15,6 +15,7 @@ details. */
 #include "path.h"
 #include "fhandler.h"
 #include "exception.h"
+#include "tls_pbuf.h"
 
 int __reg2
 check_invalid_virtual_addr (const void *s, unsigned sz)
@@ -723,7 +724,7 @@ err:
    See FreeBSD src/lib/libc/amd64/string/memset.S
    and FreeBSD src/lib/libc/amd64/string/bcopy.S */
 
-asm volatile ("								\n\
+asm ("								\n\
 /*									\n\
  * Written by J.T. Conklin <jtc@NetBSD.org>.				\n\
  * Public domain.							\n\
@@ -790,7 +791,7 @@ L1:     rep								\n\
 	.seh_endproc							\n\
 ");
 
-asm volatile ("								\n\
+asm ("								\n\
 /*-									\n\
  * Copyright (c) 1990 The Regents of the University of California.	\n\
  * All rights reserved.							\n\
@@ -958,4 +959,68 @@ SetThreadName(DWORD dwThreadID, const char* threadName)
     }
   __except (NO_ERROR)
   __endtry
+}
+
+#define add_size(p,s) ((p) = ((__typeof__(p))((PBYTE)(p)+(s))))
+
+static WORD num_cpu_per_group = 0;
+static WORD group_count = 0;
+
+WORD
+__get_cpus_per_group (void)
+{
+  tmp_pathbuf tp;
+
+  if (num_cpu_per_group)
+    return num_cpu_per_group;
+
+  num_cpu_per_group = 64;
+  group_count = 1;
+
+  PSYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX lpi =
+            (PSYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX) tp.c_get ();
+  DWORD lpi_size = NT_MAX_PATH;
+
+  /* Fake a SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX group info block on Vista
+     systems.  This may be over the top but if the below code just using
+     ActiveProcessorCount turns out to be insufficient, we can build on that. */
+  if (!wincap.has_processor_groups ()
+      || !GetLogicalProcessorInformationEx (RelationGroup, lpi, &lpi_size))
+    {
+      lpi_size = sizeof *lpi;
+      lpi->Relationship = RelationGroup;
+      lpi->Size = lpi_size;
+      lpi->Group.MaximumGroupCount = 1;
+      lpi->Group.ActiveGroupCount = 1;
+      lpi->Group.GroupInfo[0].MaximumProcessorCount = wincap.cpu_count ();
+      lpi->Group.GroupInfo[0].ActiveProcessorCount
+        = __builtin_popcountl (wincap.cpu_mask ());
+      lpi->Group.GroupInfo[0].ActiveProcessorMask = wincap.cpu_mask ();
+    }
+
+  PSYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX plpi = lpi;
+  for (DWORD size = lpi_size; size > 0;
+       size -= plpi->Size, add_size (plpi, plpi->Size))
+    if (plpi->Relationship == RelationGroup)
+      {
+        /* There are systems with a MaximumProcessorCount not reflecting the
+	   actually available CPUs.  The ActiveProcessorCount is correct
+	   though.  So we just use ActiveProcessorCount for now, hoping for
+	   the best. */
+        num_cpu_per_group = plpi->Group.GroupInfo[0].ActiveProcessorCount;
+
+	/* Follow that lead to get the group count. */
+	group_count = plpi->Group.ActiveGroupCount;
+        break;
+      }
+
+  return num_cpu_per_group;
+}
+
+WORD
+__get_group_count (void)
+{
+  if (group_count == 0)
+    (void) __get_cpus_per_group (); // caller should have called this first
+  return group_count;
 }

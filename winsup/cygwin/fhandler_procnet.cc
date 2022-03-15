@@ -16,21 +16,15 @@ details. */
 #undef u_long
 #define u_long __ms_u_long
 #endif
-#include <ws2tcpip.h>
-#include <iphlpapi.h>
+#include <w32api/ws2tcpip.h>
+#include <w32api/iphlpapi.h>
+#include <asm/byteorder.h>
+#include <stdio.h>
 #include "cygerrno.h"
-#include "security.h"
 #include "path.h"
 #include "fhandler.h"
 #include "fhandler_virtual.h"
 #include "dtable.h"
-#include "cygheap.h"
-#include <asm/byteorder.h>
-
-#define _COMPILING_NEWLIB
-#include <dirent.h>
-#include <stdio.h>
-#include <stdlib.h>
 
 bool get_adapters_addresses (PIP_ADAPTER_ADDRESSES *pa0, ULONG family);
 
@@ -47,10 +41,6 @@ static const virt_tab_t procnet_tab[] =
 static const int PROCNET_LINK_COUNT =
   (sizeof (procnet_tab) / sizeof (virt_tab_t)) - 1;
 
-/* Returns 0 if path doesn't exist, >0 if path is a directory,
- * -1 if path is a file, -2 if path is a symlink, -3 if path is a pipe,
- * -4 if path is a socket.
- */
 virtual_ftype_t
 fhandler_procnet::exists ()
 {

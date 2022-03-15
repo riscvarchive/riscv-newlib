@@ -130,6 +130,7 @@ const int __collate_load_error = 0;
   extern UNICODE_STRING _RDATA ro_u_mtx = _ROU (L"mtx");
   extern UNICODE_STRING _RDATA ro_u_csc = _ROU (L"CSC-CACHE");
   extern UNICODE_STRING _RDATA ro_u_fat = _ROU (L"FAT");
+  extern UNICODE_STRING _RDATA ro_u_exfat = _ROU (L"exFAT");
   extern UNICODE_STRING _RDATA ro_u_mvfs = _ROU (L"MVFS");
   extern UNICODE_STRING _RDATA ro_u_nfs = _ROU (L"NFS");
   extern UNICODE_STRING _RDATA ro_u_ntfs = _ROU (L"NTFS");
@@ -149,6 +150,7 @@ const int __collate_load_error = 0;
   extern UNICODE_STRING _RDATA ro_u_natdir = _ROU (L"Directory");
   extern UNICODE_STRING _RDATA ro_u_natsyml = _ROU (L"SymbolicLink");
   extern UNICODE_STRING _RDATA ro_u_natdev = _ROU (L"Device");
+  extern UNICODE_STRING _RDATA ro_u_npfs = _ROU (L"\\Device\\NamedPipe\\");
   #undef _ROU
 
   /* This is an exported copy of environ which can be used by DLLs

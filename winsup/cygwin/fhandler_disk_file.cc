@@ -24,6 +24,8 @@ details. */
 #include "tls_pbuf.h"
 #include "devices.h"
 #include "ldap.h"
+#include <aio.h>
+#include <cygwin/fs.h>
 
 #define _COMPILING_NEWLIB
 #include <dirent.h>
@@ -210,7 +212,7 @@ fhandler_base::fstat_by_nfs_ea (struct stat *buf)
   cyg_ldap cldap;
   bool ldap_open = false;
 
-  if (get_io_handle ())
+  if (get_handle ())
     {
       /* NFS stumbles over its own caching.  If you write to the file,
 	 a subsequent fstat does not return the actual size of the file,
@@ -218,8 +220,8 @@ fhandler_base::fstat_by_nfs_ea (struct stat *buf)
 	 access through another handle invalidates the caching within the
 	 NFS client. */
       if (get_access () & GENERIC_WRITE)
-	FlushFileBuffers (get_io_handle ());
-      pc.get_finfo (get_io_handle ());
+	FlushFileBuffers (get_handle ());
+      pc.get_finfo (get_handle ());
     }
   buf->st_dev = nfs_attr->fsid;
   buf->st_ino = nfs_attr->fileid;
@@ -289,7 +291,7 @@ fhandler_base::fstat_by_handle (struct stat *buf)
 
   /* If the file has been opened for other purposes than stat, we can't rely
      on the information stored in pc.fai.  So we overwrite them here. */
-  if (get_io_handle ())
+  if (get_handle ())
     {
       status = pc.get_finfo (h);
       if (!NT_SUCCESS (status))
@@ -384,7 +386,7 @@ fhandler_base::fstat_fs (struct stat *buf)
       nohandle (false);
       close_fs ();
       nohandle (no_handle);
-      set_io_handle (NULL);
+      set_handle (NULL);
     }
   if (res)
     res = fstat_by_name (buf);
@@ -1188,10 +1190,10 @@ fhandler_disk_file::link (const char *newpath)
   char new_buf[nlen + 5];
   if (!newpc.error)
     {
-      /* If the original file is a lnk special file (except for sockets),
+      /* If the original file is a lnk special file,
 	 and if the original file has a .lnk suffix, add one to the hardlink
 	 as well. */
-      if (pc.is_lnk_special () && !pc.issocket ()
+      if (pc.is_lnk_special ()
 	  && RtlEqualUnicodePathSuffix (pc.get_nt_native_path (),
 					&ro_u_lnk, TRUE))
 	{
@@ -1243,16 +1245,27 @@ fhandler_disk_file::link (const char *newpath)
 	__seterrno_from_nt_status (status);
       return -1;
     }
-  else if (pc.file_attributes () & FILE_ATTRIBUTE_TEMPORARY)
+  else if ((pc.file_attributes () & O_TMPFILE_FILE_ATTRS)
+	   == O_TMPFILE_FILE_ATTRS)
     {
-      /* If the original file has been opened with O_TMPFILE the file has
-	 FILE_ATTRIBUTE_TEMPORARY set.  After a successful hardlink the
-	 file is not temporary anymore in the usual sense.  So we remove
-	 FILE_ATTRIBUTE_TEMPORARY here, even if this makes the original file
-	 visible in directory enumeration. */
+      /* An O_TMPFILE file has FILE_ATTRIBUTE_TEMPORARY and
+	 FILE_ATTRIBUTE_HIDDEN set.  After a successful hardlink the file is
+	 not temporary anymore in the usual sense.  So we remove these
+	 attributes here.
+
+	 Note that we don't create a reopen attribute for the original
+	 link but rather a normal attribute for the just created link.
+	 The reason is a curious behaviour of Windows:  If we remove the
+	 O_TMPFILE attributes on the original link, the new link will not
+	 show up in file system listings (not even native ones from , e.g.,
+	 `cmd /c dir'), long after the original link has been closed and
+	 removed.  The file and its metadata will be kept in memory only
+	 as long as Windows sees fit.  By opening the new link, we request
+	 the attribute changes on the new link, so after closing it Windows
+	 will have an increased interest to write back the metadata. */
       OBJECT_ATTRIBUTES attr;
       status = NtOpenFile (&fh, FILE_WRITE_ATTRIBUTES,
-			   pc.init_reopen_attr (attr, fh), &io,
+			   newpc.get_object_attr (attr, sec_none_nih), &io,
 			   FILE_SHARE_VALID_FLAGS, FILE_OPEN_FOR_BACKUP_INTENT);
       if (!NT_SUCCESS (status))
 	debug_printf ("Opening for removing TEMPORARY attrib failed, "
@@ -1263,8 +1276,7 @@ fhandler_disk_file::link (const char *newpath)
 
 	  fbi.CreationTime.QuadPart = fbi.LastAccessTime.QuadPart
 	  = fbi.LastWriteTime.QuadPart = fbi.ChangeTime.QuadPart = 0LL;
-	  fbi.FileAttributes = (pc.file_attributes ()
-				& ~FILE_ATTRIBUTE_TEMPORARY)
+	  fbi.FileAttributes = (pc.file_attributes () & ~O_TMPFILE_FILE_ATTRS)
 			       ?: FILE_ATTRIBUTE_NORMAL;
 	  status = NtSetInformationFile (fh, &io, &fbi, sizeof fbi,
 					 FileBasicInformation);
@@ -1314,8 +1326,8 @@ fhandler_base::utimens_fs (const struct timespec *tvp)
     tmp[1] = tmp[0] = timeofday;
   else
     {
-      if ((tvp[0].tv_nsec < UTIME_NOW || tvp[0].tv_nsec > 999999999L)
-	  || (tvp[1].tv_nsec < UTIME_NOW || tvp[1].tv_nsec > 999999999L))
+      if ((tvp[0].tv_nsec < UTIME_NOW || tvp[0].tv_nsec >= NSPERSEC)
+	  || (tvp[1].tv_nsec < UTIME_NOW || tvp[1].tv_nsec >= NSPERSEC))
 	{
 	  if (closeit)
 	    close_fs ();
@@ -1453,7 +1465,7 @@ fhandler_base::open_fs (int flags, mode_t mode)
       /* The file info in pc is wrong at this point for newly created files.
 	 Refresh it before fetching any file info. */
       if (new_file)
-	pc.get_finfo (get_io_handle ());
+	pc.get_finfo (get_handle ());
 
       if (pc.isgood_inode (pc.get_ino ()))
 	ino = pc.get_ino ();
@@ -1501,39 +1513,48 @@ fhandler_base::open_fs (int flags, mode_t mode)
    parameter to the latter. */
 
 int
-fhandler_disk_file::prw_open (bool write)
+fhandler_disk_file::prw_open (bool write, void *aio)
 {
   NTSTATUS status;
   IO_STATUS_BLOCK io;
   OBJECT_ATTRIBUTES attr;
+  ULONG options = get_options ();
+
+  /* If async i/o is intended, turn off the default synchronous operation */
+  if (aio)
+    options &= ~FILE_SYNCHRONOUS_IO_NONALERT;
 
   /* First try to open with the original access mask */
   ACCESS_MASK access = get_access ();
   status = NtOpenFile (&prw_handle, access,
 		       pc.init_reopen_attr (attr, get_handle ()), &io,
-		       FILE_SHARE_VALID_FLAGS, get_options ());
+		       FILE_SHARE_VALID_FLAGS, options);
   if (status == STATUS_ACCESS_DENIED)
     {
       /* If we get an access denied, chmod has been called.  Try again
 	 with just the required rights to perform the called function. */
       access &= write ? ~GENERIC_READ : ~GENERIC_WRITE;
       status = NtOpenFile (&prw_handle, access, &attr, &io,
-			   FILE_SHARE_VALID_FLAGS, get_options ());
+			   FILE_SHARE_VALID_FLAGS, options);
     }
   debug_printf ("%y = NtOpenFile (%p, %y, %S, io, %y, %y)",
 		status, prw_handle, access, pc.get_nt_native_path (),
-		FILE_SHARE_VALID_FLAGS, get_options ());
+		FILE_SHARE_VALID_FLAGS, options);
   if (!NT_SUCCESS (status))
     {
       __seterrno_from_nt_status (status);
       return -1;
     }
+
+  /* record prw_handle's asyncness for subsequent pread/pwrite operations */
+  prw_handle_isasync = !!aio;
   return 0;
 }
 
 ssize_t __reg3
-fhandler_disk_file::pread (void *buf, size_t count, off_t offset)
+fhandler_disk_file::pread (void *buf, size_t count, off_t offset, void *aio)
 {
+  struct aiocb *aiocb = (struct aiocb *) aio;
   ssize_t res;
 
   if ((get_flags () & O_ACCMODE) == O_WRONLY)
@@ -1550,10 +1571,16 @@ fhandler_disk_file::pread (void *buf, size_t count, off_t offset)
       NTSTATUS status;
       IO_STATUS_BLOCK io;
       LARGE_INTEGER off = { QuadPart:offset };
+      HANDLE evt = aio ? (HANDLE) aiocb->aio_wincb.event : NULL;
+      PIO_STATUS_BLOCK pio = aio ? (PIO_STATUS_BLOCK) &aiocb->aio_wincb : &io;
 
-      if (!prw_handle && prw_open (false))
+      /* If existing prw_handle asyncness doesn't match this call's, re-open */
+      if (prw_handle && (prw_handle_isasync != !!aio))
+	NtClose (prw_handle), prw_handle = NULL;
+
+      if (!prw_handle && prw_open (false, aio))
 	goto non_atomic;
-      status = NtReadFile (prw_handle, NULL, NULL, NULL, &io, buf, count,
+      status = NtReadFile (prw_handle, evt, NULL, NULL, pio, buf, count,
 			   &off, NULL);
       if (status == STATUS_END_OF_FILE)
 	res = 0;
@@ -1574,11 +1601,12 @@ fhandler_disk_file::pread (void *buf, size_t count, off_t offset)
 	      switch (mmap_is_attached_or_noreserve (buf, count))
 		{
 		case MMAP_NORESERVE_COMMITED:
-		  status = NtReadFile (prw_handle, NULL, NULL, NULL, &io,
+                  status = NtReadFile (prw_handle, evt, NULL, NULL, pio,
 				       buf, count, &off, NULL);
 		  if (NT_SUCCESS (status))
 		    {
-		      res = io.Information;
+		      res = aio ? (ssize_t) aiocb->aio_wincb.info
+                                : io.Information;
 		      goto out;
 		    }
 		  break;
@@ -1592,7 +1620,10 @@ fhandler_disk_file::pread (void *buf, size_t count, off_t offset)
 	  return -1;
 	}
       else
-	res = io.Information;
+	{
+	  res = aio ? (ssize_t) aiocb->aio_wincb.info : io.Information;
+	  goto out;
+	}
     }
   else
     {
@@ -1610,15 +1641,26 @@ non_atomic:
 	  else
 	    res = -1;
 	}
+
+      /* If this was a disallowed async request, simulate its conclusion */
+      if (aio)
+	{
+	  aiocb->aio_rbytes = res;
+	  aiocb->aio_errno = res == -1 ? get_errno () : 0;
+	  SetEvent ((HANDLE) aiocb->aio_wincb.event);
+	}
     }
 out:
-  debug_printf ("%d = pread(%p, %ld, %D)\n", res, buf, count, offset);
+  debug_printf ("%d = pread(%p, %ld, %D, %p)\n", res, buf, count, offset, aio);
   return res;
 }
 
 ssize_t __reg3
-fhandler_disk_file::pwrite (void *buf, size_t count, off_t offset)
+fhandler_disk_file::pwrite (void *buf, size_t count, off_t offset, void *aio)
 {
+  struct aiocb *aiocb = (struct aiocb *) aio;
+  ssize_t res;
+
   if ((get_flags () & O_ACCMODE) == O_RDONLY)
     {
       set_errno (EBADF);
@@ -1632,32 +1674,49 @@ fhandler_disk_file::pwrite (void *buf, size_t count, off_t offset)
       NTSTATUS status;
       IO_STATUS_BLOCK io;
       LARGE_INTEGER off = { QuadPart:offset };
+      HANDLE evt = aio ? (HANDLE) aiocb->aio_wincb.event : NULL;
+      PIO_STATUS_BLOCK pio = aio ? (PIO_STATUS_BLOCK) &aiocb->aio_wincb : &io;
 
-      if (!prw_handle && prw_open (true))
+      /* If existing prw_handle asyncness doesn't match this call's, re-open */
+      if (prw_handle && (prw_handle_isasync != !!aio))
+        NtClose (prw_handle), prw_handle = NULL;
+
+      if (!prw_handle && prw_open (true, aio))
 	goto non_atomic;
-      status = NtWriteFile (prw_handle, NULL, NULL, NULL, &io, buf, count,
+      status = NtWriteFile (prw_handle, evt, NULL, NULL, pio, buf, count,
 			    &off, NULL);
       if (!NT_SUCCESS (status))
 	{
 	  __seterrno_from_nt_status (status);
 	  return -1;
 	}
-      return io.Information;
+      res = aio ? (ssize_t) aiocb->aio_wincb.info : io.Information;
+      goto out;
     }
-
-non_atomic:
-  /* Text mode stays slow and non-atomic. */
-  int res;
-  off_t curpos = lseek (0, SEEK_CUR);
-  if (curpos < 0 || lseek (offset, SEEK_SET) < 0)
-    res = curpos;
   else
     {
-      res = (ssize_t) write (buf, count);
-      if (lseek (curpos, SEEK_SET) < 0)
-	res = -1;
+non_atomic:
+      /* Text mode stays slow and non-atomic. */
+      off_t curpos = lseek (0, SEEK_CUR);
+      if (curpos < 0 || lseek (offset, SEEK_SET) < 0)
+	res = curpos;
+      else
+	{
+	  res = (ssize_t) write (buf, count);
+	  if (lseek (curpos, SEEK_SET) < 0)
+	    res = -1;
+	}
+
+      /* If this was a disallowed async request, simulate its conclusion */
+      if (aio)
+	{
+	  aiocb->aio_rbytes = res;
+	  aiocb->aio_errno = res == -1 ? get_errno () : 0;
+	  SetEvent ((HANDLE) aiocb->aio_wincb.event);
+	}
     }
-  debug_printf ("%d = pwrite(%p, %ld, %D)\n", res, buf, count, offset);
+out:
+  debug_printf ("%d = pwrite(%p, %ld, %D, %p)\n", res, buf, count, offset, aio);
   return res;
 }
 
@@ -1702,6 +1761,10 @@ fhandler_disk_file::mkdir (mode_t mode)
        I don't know what setting that is or how to recognize such a share,
        so for now we don't request WRITE_DAC on remote drives. */
     access |= READ_CONTROL | WRITE_DAC;
+  /* Setting case sensitivity requires FILE_WRITE_ATTRIBUTES. */
+  if (wincap.has_case_sensitive_dirs ()
+      && !pc.isremote () && pc.fs_is_ntfs ())
+    access |= FILE_WRITE_ATTRIBUTES;
   status = NtCreateFile (&dir, access, pc.get_object_attr (attr, sa), &io, NULL,
 			 FILE_ATTRIBUTE_DIRECTORY, FILE_SHARE_VALID_FLAGS,
 			 FILE_CREATE,
@@ -1715,6 +1778,43 @@ fhandler_disk_file::mkdir (mode_t mode)
       pc.file_attributes (FILE_ATTRIBUTE_DIRECTORY);
       if (has_acls ())
 	set_created_file_access (dir, pc, mode & 07777);
+#if 0
+      /* FIXME: This default behaviour badly breaks interoperability.
+		Inspecting the content of case-sensitive directories
+		on remote machines results in lots of errors like
+		disappearing diretories and files, file not found, etc. */
+
+      /* Starting with Windows 10 1803, try to create all dirs below the
+         installation root as case-sensitive.  If STATUS_NOT_SUPPORTED
+	 is returned, WSL isn't installed (unfortunately a requirement
+	 for this functionality. */
+      if (wincap.has_case_sensitive_dirs ()
+	  && !pc.isremote () && pc.fs_is_ntfs ())
+	{
+	  PUNICODE_STRING new_dir = pc.get_nt_native_path ();
+	  PUNICODE_STRING root_dir = &cygheap->installation_root;
+
+	  if (RtlEqualUnicodePathPrefix (new_dir, root_dir, TRUE)
+	      && new_dir->Buffer[root_dir->Length / sizeof (WCHAR)] == L'\\')
+	    {
+	      FILE_CASE_SENSITIVE_INFORMATION fcsi;
+
+	      fcsi.Flags = FILE_CS_FLAG_CASE_SENSITIVE_DIR;
+	      status = NtSetInformationFile (dir, &io, &fcsi, sizeof fcsi,
+					     FileCaseSensitiveInformation);
+	      if (!NT_SUCCESS (status))
+		{
+		  debug_printf ("Setting dir case sensitivity, status %y",
+				status);
+		  if (status == STATUS_NOT_SUPPORTED)
+		    {
+		      debug_printf ("Dir case sensitivity requires WSL");
+		      wincap.disable_case_sensitive_dirs ();
+		    }
+		}
+	    }
+	}
+#endif
       NtClose (dir);
       res = 0;
     }
@@ -1966,7 +2066,7 @@ readdir_get_ino (const char *path, bool dot_dot)
 				      pc.get_object_attr (attr, sec_none_nih),
 				      &io, FILE_SHARE_VALID_FLAGS,
 				      FILE_OPEN_FOR_BACKUP_INTENT
-				      | (pc.is_rep_symlink ()
+				      | (pc.is_known_reparse_point ()
 				      ? FILE_OPEN_REPARSE_POINT : 0)))
 	  )
     {
@@ -2096,7 +2196,6 @@ fhandler_disk_file::readdir (DIR *dir, dirent *de)
 
   /* d_cachepos always refers to the next cache entry to use.  If it's 0
      we must reload the cache. */
-restart:
   FileAttributes = 0;
   if (d_cachepos (dir) == 0)
     {
@@ -2211,10 +2310,6 @@ go_ahead:
 	  FileAttributes =
 		((PFILE_BOTH_DIR_INFORMATION) buf)->FileAttributes;
 	}
-      /* We don't show O_TMPFILE files in the filesystem.  This is a kludge,
-	 so we may end up removing this snippet again. */
-      if (FileAttributes & FILE_ATTRIBUTE_TEMPORARY)
-	goto restart;
       RtlInitCountedUnicodeString (&fname, FileName, FileNameLength);
       d_mounts (dir)->check_mount (&fname);
       if (de->d_ino == 0 && (dir->__flags & dirent_set_d_ino))
@@ -2350,132 +2445,248 @@ fhandler_disk_file::closedir (DIR *dir)
   return res;
 }
 
-fhandler_cygdrive::fhandler_cygdrive () :
-  fhandler_disk_file (), ndrives (0), pdrive (NULL)
+uint64_t
+fhandler_disk_file::fs_ioc_getflags ()
 {
-}
+  NTSTATUS status;
+  IO_STATUS_BLOCK io;
+  FILE_BASIC_INFORMATION fbi;
+  FILE_CASE_SENSITIVE_INFORMATION fcsi;
+  uint64_t flags = 0;
 
-int
-fhandler_cygdrive::open (int flags, mode_t mode)
-{
-  if ((flags & (O_CREAT | O_EXCL)) == (O_CREAT | O_EXCL))
+  status = NtQueryInformationFile (get_handle (), &io, &fbi, sizeof fbi,
+				   FileBasicInformation);
+  if (NT_SUCCESS (status))
     {
-      set_errno (EEXIST);
-      return 0;
+      flags = (uint64_t) fbi.FileAttributes & FS_FL_USER_VISIBLE;
+      pc.file_attributes (fbi.FileAttributes);
     }
-  if (flags & O_WRONLY)
+  else
+    flags = (uint64_t) pc.file_attributes () & FS_FL_USER_VISIBLE;
+  if (pc.isdir () && wincap.has_case_sensitive_dirs ()
+      && !pc.isremote () && pc.fs_is_ntfs ())
     {
-      set_errno (EISDIR);
-      return 0;
+      fcsi.Flags = 0;
+      status = NtQueryInformationFile (get_handle (), &io,
+				       &fcsi, sizeof fcsi,
+				       FileCaseSensitiveInformation);
+      if (NT_SUCCESS (status)
+	  && (fcsi.Flags & FILE_CS_FLAG_CASE_SENSITIVE_DIR))
+	flags |= FS_CASESENS_FL;
     }
-  /* Open a fake handle to \\Device\\Null */
-  return open_null (flags);
+  return flags;
 }
 
-void
-fhandler_cygdrive::set_drives ()
-{
-  pdrive = pdrive_buf;
-  ndrives = GetLogicalDriveStrings (sizeof pdrive_buf, pdrive_buf) / DRVSZ;
-}
+/* Settable DOS attributes */
+#define FS_FL_SETATTRIBS	(FS_READONLY_FL \
+				 | FS_HIDDEN_FL \
+				 | FS_SYSTEM_FL \
+				 | FS_ARCHIVE_FL \
+				 | FS_TEMP_FL \
+				 | FS_NOTINDEXED_FL)
 
 int
-fhandler_cygdrive::fstat (struct stat *buf)
+fhandler_disk_file::fs_ioc_setflags (uint64_t flags)
 {
-  fhandler_base::fstat (buf);
-  buf->st_ino = 2;
-  buf->st_mode = S_IFDIR | STD_RBITS | STD_XBITS;
-  buf->st_nlink = 1;
-  return 0;
-}
+  int ret = -1;
+  uint64_t old_flags;
+  HANDLE fh;
+  NTSTATUS status;
+  OBJECT_ATTRIBUTES attr;
+  IO_STATUS_BLOCK io;
+  FILE_BASIC_INFORMATION fbi;
+  FILE_SET_SPARSE_BUFFER fssb;
+  USHORT comp;
+  FILE_CASE_SENSITIVE_INFORMATION fcsi;
 
-int __reg2
-fhandler_cygdrive::fstatvfs (struct statvfs *sfs)
-{
-  /* Virtual file system.  Just return an empty buffer with a few values
-     set to something useful.  Just as on Linux. */
-  memset (sfs, 0, sizeof (*sfs));
-  sfs->f_bsize = sfs->f_frsize = 4096;
-  sfs->f_flag = ST_RDONLY;
-  sfs->f_namemax = NAME_MAX;
-  return 0;
-}
-
-DIR *
-fhandler_cygdrive::opendir (int fd)
-{
-  DIR *dir;
-
-  dir = fhandler_disk_file::opendir (fd);
-  if (dir && !ndrives)
-    set_drives ();
-
-  return dir;
-}
-
-int
-fhandler_cygdrive::readdir (DIR *dir, dirent *de)
-{
-  WCHAR drive[] = L"X:";
-
-  while (true)
+  if ((get_access () & (GENERIC_WRITE | FILE_WRITE_ATTRIBUTES)) != 0)
+    fh = get_handle ();
+  else
     {
-      if (!pdrive || !*pdrive)
+      status = NtOpenFile (&fh, FILE_READ_ATTRIBUTES | FILE_WRITE_ATTRIBUTES,
+			   pc.init_reopen_attr (attr, get_handle ()), &io,
+			   FILE_SHARE_VALID_FLAGS,
+			   FILE_OPEN_FOR_BACKUP_INTENT);
+      if (!NT_SUCCESS (status))
 	{
-	  if (!(dir->__flags & dirent_saw_dot))
-	    {
-	      de->d_name[0] = '.';
-	      de->d_name[1] = '\0';
-	      de->d_ino = 2;
-	    }
-	  return ENMFILE;
+	  fh = get_handle ();
+	  __seterrno_from_nt_status (status);
+	  goto out;
 	}
-      disk_type dt = get_disk_type ((drive[0] = *pdrive, drive));
-      if (dt == DT_SHARE_SMB)
-	{
-	  /* Calling NetUseGetInfo on SMB drives allows to fetch the
-	     current state of the drive without trying to open a file
-	     descriptor on the share (GetFileAttributes).  This avoids
-	     waiting for SMB timeouts.  Of course, there's a downside:
-	     If a drive becomes availabe again, it can take a couple of
-	     minutes to recognize it. As long as this didn't happen,
-	     the drive will not show up in the cygdrive dir. */
-	  PUSE_INFO_1 pui1;
-	  DWORD status;
-
-	  if (NetUseGetInfo (NULL, drive, 1, (PBYTE *) &pui1) == NERR_Success)
-	    {
-	      status = pui1->ui1_status;
-	      NetApiBufferFree (pui1);
-	      if (status == USE_OK)
-		break;
-	    }
-	}
-      else if (dt != DT_FLOPPY
-	       && GetFileAttributes (pdrive) != INVALID_FILE_ATTRIBUTES)
-	break;
-      pdrive = strchr (pdrive, '\0') + 1;
     }
-  *de->d_name = cyg_tolower (*pdrive);
-  de->d_name[1] = '\0';
-  user_shared->warned_msdos = true;
-  de->d_ino = readdir_get_ino (pdrive, false);
-  dir->__d_position++;
-  pdrive = strchr (pdrive, '\0') + 1;
-  syscall_printf ("%p = readdir (%p) (%s)", &de, dir, de->d_name);
-  return 0;
-}
+  old_flags = fs_ioc_getflags ();
+  if ((old_flags & FS_FL_SETATTRIBS) != (flags & FS_FL_SETATTRIBS))
+    {
+      fbi.CreationTime.QuadPart
+      = fbi.LastAccessTime.QuadPart
+      = fbi.LastWriteTime.QuadPart
+      = fbi.ChangeTime.QuadPart = 0LL;
+      fbi.FileAttributes = (ULONG) old_flags;
+      fbi.FileAttributes &= ~FS_FL_SETATTRIBS;
+      fbi.FileAttributes |= (flags & FS_FL_SETATTRIBS);
+      if (fbi.FileAttributes == 0)
+	fbi.FileAttributes = FILE_ATTRIBUTE_NORMAL;
+      status = NtSetInformationFile (fh, &io, &fbi, sizeof fbi,
+				     FileBasicInformation);
+      if (!NT_SUCCESS (status))
+	{
+	  __seterrno_from_nt_status (status);
+	  goto out;
+	}
+    }
+  if (!pc.isdir() && (flags & FS_SPARSE_FL) != (old_flags & FS_SPARSE_FL))
+    {
+      fssb.SetSparse = (flags & FS_SPARSE_FL) ? TRUE : FALSE;
+      status = NtFsControlFile (fh, NULL, NULL, NULL, &io,
+				FSCTL_SET_SPARSE, &fssb, sizeof fssb, NULL, 0);
+      if (!NT_SUCCESS (status))
+	{
+	  __seterrno_from_nt_status (status);
+	  goto out;
+	}
+    }
+  if (pc.isdir () && (flags & FS_CASESENS_FL) != (old_flags & FS_CASESENS_FL))
+    {
+      if (wincap.has_case_sensitive_dirs ()
+	  && !pc.isremote () && pc.fs_is_ntfs ())
+	{
+	  fcsi.Flags = (flags & FS_CASESENS_FL)
+		       ? FILE_CS_FLAG_CASE_SENSITIVE_DIR : 0;
+	  status = NtSetInformationFile (fh, &io, &fcsi, sizeof fcsi,
+					 FileCaseSensitiveInformation);
+	  if (!NT_SUCCESS (status))
+	    {
+	      /* Special case: The directory contains files which only
+		 differ in case.  NtSetInformationFile refuses to change
+		 back to case insensitivity and returns status 0xc00004b3.
+		 There's no STATUS_xyz macro assigned to that value yet,
+		 nor does it map to a useful Win32 error value. */
+	      if (status == (NTSTATUS) 0xc00004b3)
+		set_errno (EINVAL);	/* Does that make sense? */
+	      else
+		__seterrno_from_nt_status (status);
+	      goto out;
+	    }
+	}
+      else
+	{
+	  set_errno (ENOTSUP);
+	  goto out;
+	}
+    }
+  if ((flags & FS_COMPRESSED_FL) != (old_flags & FS_COMPRESSED_FL))
+    {
+      if (fh != get_handle ())
+	NtClose (fh);
+      fh = NULL;
+      if ((get_access () & (GENERIC_WRITE | GENERIC_READ))
+	  != (GENERIC_WRITE | GENERIC_READ))
+	{
+	  status = NtOpenFile (&fh, GENERIC_READ | GENERIC_WRITE | SYNCHRONIZE,
+			       pc.init_reopen_attr (attr, get_handle ()), &io,
+			       FILE_SHARE_VALID_FLAGS,
+			       FILE_SYNCHRONOUS_IO_NONALERT
+			       | FILE_OPEN_FOR_BACKUP_INTENT);
+	  if (!NT_SUCCESS (status))
+	    {
+	      fh = get_handle ();
+	      __seterrno_from_nt_status (status);
+	      goto out;
+	    }
+	}
+      comp = (flags & FS_COMPRESSED_FL)
+	     ? COMPRESSION_FORMAT_DEFAULT : COMPRESSION_FORMAT_NONE;
+      status = NtFsControlFile (fh, NULL, NULL, NULL, &io,
+				FSCTL_SET_COMPRESSION, &comp, sizeof comp,
+				NULL, 0);
+      if (!NT_SUCCESS (status))
+	{
+	  __seterrno_from_nt_status (status);
+	  goto out;
+	}
+    }
+  if (!pc.isdir() && (flags & FS_ENCRYPT_FL) != (old_flags & FS_ENCRYPT_FL))
+    {
+      tmp_pathbuf tp;
+      PWCHAR path = tp.w_get ();
+      BOOL cret;
 
-void
-fhandler_cygdrive::rewinddir (DIR *dir)
-{
-  pdrive = pdrive_buf;
-  dir->__d_position = 0;
+      /* EncryptFileW/DecryptFileW needs exclusive access. */
+      if (fh != get_handle ())
+	NtClose (fh);
+      NtClose (get_handle ());
+      set_handle (NULL);
+
+      pc.get_wide_win32_path (path);
+      cret = (flags & FS_ENCRYPT_FL)
+	     ? EncryptFileW (path) : DecryptFileW (path, 0);
+      status = NtOpenFile (&fh, get_access (),
+			   pc.get_object_attr (attr, sec_none_nih), &io,
+			   FILE_SHARE_VALID_FLAGS,
+			   FILE_SYNCHRONOUS_IO_NONALERT
+			   | FILE_OPEN_FOR_BACKUP_INTENT);
+      if (!NT_SUCCESS (status))
+	{
+	  __seterrno_from_nt_status (status);
+	  return -1;
+	}
+      set_handle (fh);
+      if (!cret)
+	{
+	  __seterrno ();
+	  goto out;
+	}
+    }
+  ret = 0;
+out:
+  status = NtQueryInformationFile (fh, &io, &fbi, sizeof fbi,
+				   FileBasicInformation);
+  if (NT_SUCCESS (status))
+    pc.file_attributes (fbi.FileAttributes);
+  if (fh != get_handle ())
+    NtClose (fh);
+  return ret;
 }
 
 int
-fhandler_cygdrive::closedir (DIR *dir)
+fhandler_disk_file::ioctl (unsigned int cmd, void *p)
 {
-  pdrive = pdrive_buf;
-  return 0;
+  int ret = -1;
+  uint64_t flags = 0;
+
+  switch (cmd)
+    {
+    case FS_IOC_GETFLAGS:
+      __try
+	{
+	  uint64_t *fp = (uint64_t *) p;
+	  *fp = fs_ioc_getflags ();
+	  ret = 0;
+	}
+      __except (EFAULT) {}
+      __endtry
+      break;
+    case FS_IOC_SETFLAGS:
+      __try
+	{
+	  flags = *(__uint64_t *) p;
+	}
+      __except (EFAULT)
+	{
+	  break;
+	}
+      __endtry
+      if (flags & ~FS_FL_USER_MODIFIABLE)
+	{
+	  set_errno (EINVAL);
+	  break;
+	}
+      ret = fs_ioc_setflags (flags);
+      break;
+    default:
+      ret = fhandler_base::ioctl (cmd, p);
+      break;
+    }
+  syscall_printf ("%d = ioctl_file(%x, %p)", ret, cmd, p);
+  return ret;
 }

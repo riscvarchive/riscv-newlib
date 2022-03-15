@@ -148,7 +148,7 @@ case "${target}" in
   m32c-*-*)
 	AC_CONFIG_SUBDIRS([m32c])
 	;;
-  msp430*-*-elf)
+  msp430-*-elf*)
 	AC_CONFIG_SUBDIRS([msp430])
 	config_libnosys=false
 	;;
@@ -175,6 +175,12 @@ case "${target}" in
 	;;
   or1k-*-* | or1knd-*-* )
 	AC_CONFIG_SUBDIRS([or1k])
+	;;
+  pru-*-*)
+	AC_CONFIG_SUBDIRS([pru])
+	;;
+  nios2-*-*)
+	AC_CONFIG_SUBDIRS([nios2])
 	;;
 esac
 
@@ -223,6 +229,7 @@ AC_CONFIG_FILES([Makefile],
 fi],
 srcdir=${srcdir}
 target=${target}
+host=${host}
 with_multisubdir=${with_multisubdir}
 ac_configure_args="--enable-multilib ${ac_configure_args}"
 CONFIG_SHELL=${CONFIG_SHELL-/bin/sh}

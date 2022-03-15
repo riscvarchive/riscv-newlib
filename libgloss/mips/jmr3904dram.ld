@@ -56,6 +56,7 @@ SECTIONS
     *(.gnu.linkonce.r.*)
   }
    _fdata = ALIGN(16);
+  . = fdata;
   .data : {
     *(.data)
     *(.data.*)
@@ -94,6 +95,7 @@ SECTIONS
     *(COMMON)
   }
 
+  . = ALIGN(4);
    end = .;
    _end = .;
 

@@ -16,9 +16,6 @@
 #include <sys/types.h>
 #include <machine/ieeefp.h>
 
-/* REDHAT LOCAL: Default to XOPEN_MODE.  */
-#define _XOPEN_MODE
-
 /* Most routines need to check whether a float is finite, infinite, or not a
    number, and many need to know whether the result of an operation will
    overflow.  These conditions depend on whether the largest exponent is
@@ -231,6 +228,9 @@ extern float __ieee754_scalbf __P((float,float));
    This is valid as long as there are no namespace issues (the
    extern symbol is reserved whenever the caller is reserved)
    and there are no observable error handling side effects.  */
+# define __ieee754_exp(x) exp(x)
+# define __ieee754_log(x) log(x)
+# define __ieee754_pow(x,y) pow(x,y)
 # define __ieee754_expf(x) expf(x)
 # define __ieee754_logf(x) logf(x)
 # define __ieee754_powf(x,y) powf(x,y)

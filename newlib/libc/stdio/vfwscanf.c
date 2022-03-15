@@ -602,6 +602,7 @@ __SVFWSCANF_R (struct _reent *rptr,
 	case L'*':
 	  if ((flags & (CHAR | SHORT | LONG | LONGDBL | SUPPRESS | MALLOC))
 	      || width)
+	    goto match_failure;
 	  flags |= SUPPRESS;
 	  goto again;
 	case L'l':
@@ -1636,7 +1637,7 @@ __SVFWSCANF_R (struct _reent *rptr,
 		{
 		  flp = GET_ARG (N, ap, float *);
 		  if (isnan (res))
-		    *flp = nanf (NULL);
+		    *flp = nanf ("");
 		  else
 		    *flp = res;
 		}

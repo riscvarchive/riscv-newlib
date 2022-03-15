@@ -2,7 +2,7 @@ dnl This provides configure definitions used by all the newlib
 dnl configure.in files.
 
 AC_DEFUN([DEF_NEWLIB_MAJOR_VERSION],m4_define([NEWLIB_MAJOR_VERSION],[3]))
-AC_DEFUN([DEF_NEWLIB_MINOR_VERSION],m4_define([NEWLIB_MINOR_VERSION],[0]))
+AC_DEFUN([DEF_NEWLIB_MINOR_VERSION],m4_define([NEWLIB_MINOR_VERSION],[2]))
 AC_DEFUN([DEF_NEWLIB_PATCHLEVEL_VERSION],m4_define([NEWLIB_PATCHLEVEL_VERSION],[0]))
 AC_DEFUN([DEF_NEWLIB_VERSION],m4_define([NEWLIB_VERSION],[NEWLIB_MAJOR_VERSION.NEWLIB_MINOR_VERSION.NEWLIB_PATCHLEVEL_VERSION]))
 
@@ -91,6 +91,16 @@ AC_ARG_ENABLE(newlib-supplied-syscalls,
  esac], [newlib_may_supply_syscalls=yes])dnl
 
 AM_CONDITIONAL(MAY_SUPPLY_SYSCALLS, test x[$]{newlib_may_supply_syscalls} = xyes)
+
+dnl Support --disable-newlib-fno-builtin
+AC_ARG_ENABLE(newlib-fno-builtin,
+[  --disable-newlib-fno-builtin disable -fno-builtin flag to allow compiler to use builtin library functions],
+[case "${enableval}" in
+  yes) newlib_fno_builtin=yes ;;
+  no)  newlib_fno_builtin=no ;;
+  *)   AC_MSG_ERROR(bad value ${enableval} for newlib-fno-builtin option) ;;
+ esac], [newlib_fno_builtin=])dnl
+
 
 dnl We may get other options which we don't document:
 dnl --with-target-subdir, --with-multisrctop, --with-multisubdir
@@ -202,8 +212,6 @@ fi
 
 . [$]{newlib_basedir}/configure.host
 
-newlib_cflags="[$]{newlib_cflags} -fno-builtin"
-
 NEWLIB_CFLAGS=${newlib_cflags}
 AC_SUBST(NEWLIB_CFLAGS)
 
@@ -220,6 +228,11 @@ AM_CONDITIONAL(ELIX_LEVEL_3, test x[$]{newlib_elix_level} = x3)
 AM_CONDITIONAL(ELIX_LEVEL_4, test x[$]{newlib_elix_level} = x4)
 
 AM_CONDITIONAL(USE_LIBTOOL, test x[$]{use_libtool} = xyes)
+
+# Emit any target-specific warnings.
+if test "x${newlib_msg_warn}" != "x"; then
+   AC_MSG_WARN([${newlib_msg_warn}])
+fi
 
 # Hard-code OBJEXT.  Normally it is set by AC_OBJEXT, but we
 # use oext, which is set in configure.host based on the target platform.

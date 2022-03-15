@@ -185,6 +185,7 @@ extern "C" void error_start_init (const char*);
 extern "C" int try_to_debug (bool waitloop = 1);
 
 void ld_preload ();
+void fixup_hooks_after_fork ();
 const char *find_first_notloaded_dll (class path_conv &);
 
 /**************************** Miscellaneous ******************************/
@@ -198,6 +199,7 @@ ino_t __reg2 hash_path_name (ino_t hash, const char *name);
 void __reg2 nofinalslash (const char *src, char *dst);
 
 void __reg3 *hook_or_detect_cygwin (const char *, const void *, WORD&, HANDLE h = NULL);
+void __reg3 *hook_api (const char *mname, const char *name, const void *fn);
 
 /* Time related */
 void __stdcall totimeval (struct timeval *, PLARGE_INTEGER, int, int);
@@ -206,15 +208,16 @@ void __stdcall to_timestruc_t (PLARGE_INTEGER, timestruc_t *);
 void __stdcall time_as_timestruc_t (timestruc_t *);
 void __stdcall timeval_to_filetime (const struct timeval *, PLARGE_INTEGER);
 void __stdcall timespec_to_filetime (const struct timespec *, PLARGE_INTEGER);
+bool timeval_to_ms (const struct timeval *, DWORD &);
 
 /* Console related */
 void __stdcall set_console_title (char *);
 void init_console_handler (bool);
 
-void __reg2 __set_winsock_errno (const char *fn, int ln);
-#define set_winsock_errno() __set_winsock_errno (__FUNCTION__, __LINE__)
-
 extern bool wsock_started;
+
+/* PTY related */
+void set_ishybrid_and_switch_to_pcon (HANDLE h);
 
 /* Printf type functions */
 extern "C" void vapi_fatal (const char *, va_list ap) __attribute__ ((noreturn));
@@ -225,9 +228,7 @@ int __small_swprintf (PWCHAR dst, const WCHAR *fmt, ...);
 int __small_vswprintf (PWCHAR dst, const WCHAR *fmt, va_list ap);
 void multiple_cygwin_problem (const char *, uintptr_t, uintptr_t);
 
-extern "C" void vklog (int priority, const char *message, va_list ap);
-extern "C" void klog (int priority, const char *message, ...);
-bool child_copy (HANDLE, bool, ...);
+bool child_copy (HANDLE, bool, bool, ...);
 
 class path_conv;
 

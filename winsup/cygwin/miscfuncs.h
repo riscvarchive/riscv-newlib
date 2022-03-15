@@ -96,6 +96,8 @@ transform_chars (PUNICODE_STRING upath, USHORT start_idx)
 		   upath->Buffer + upath->Length / sizeof (WCHAR) - 1);
 }
 
+PWCHAR transform_chars_af_unix (PWCHAR, const char *, __socklen_t);
+
 /* Memory checking */
 int __reg2 check_invalid_virtual_addr (const void *s, unsigned sz);
 
@@ -116,5 +118,8 @@ extern "C" HANDLE WINAPI CygwinCreateThread (LPTHREAD_START_ROUTINE thread_func,
 					     LPDWORD thread_id);
 
 void SetThreadName (DWORD dwThreadID, const char* threadName);
+
+WORD __get_cpus_per_group (void);
+WORD __get_group_count (void);
 
 #endif /*_MISCFUNCS_H*/

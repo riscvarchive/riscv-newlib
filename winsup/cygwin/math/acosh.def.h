@@ -50,14 +50,19 @@ __FLT_TYPE
 __FLT_ABI(acosh) (__FLT_TYPE x)
 {
   int x_class = fpclassify (x);
-  if (x_class == FP_NAN || x < __FLT_CST(1.0))
+  if (x_class == FP_NAN)
     {
-      __FLT_RPT_DOMAIN ("acosh", x, 0.0, __FLT_NAN);
+      errno = EDOM;
+      return x;
+    }
+  else if (x < __FLT_CST(1.0))
+    {
+      errno = EDOM;
       return __FLT_NAN;
     }
   else if (x_class == FP_INFINITE)
     {
-      __FLT_RPT_DOMAIN ("acosh", x, 0.0, __FLT_NAN);
+      errno = EDOM;
       return __FLT_NAN;
     }
 

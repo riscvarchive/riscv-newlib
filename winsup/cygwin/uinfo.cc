@@ -117,7 +117,7 @@ cygheap_user::init ()
 
    This needs careful checking should we use check_token_membership in other
    circumstances. */
-static bool
+bool
 check_token_membership (PSID sid)
 {
   NTSTATUS status;
@@ -142,7 +142,7 @@ check_token_membership (PSID sid)
   return false;
 }
 
-void
+static void
 internal_getlogin (cygheap_user &user)
 {
   struct passwd *pwd;
@@ -651,7 +651,7 @@ cygheap_pwdgrp::init ()
 		    && strchr (" \t", c[sizeof(s)-1]))
 
 /* The /etc/nsswitch.conf file is read exactly once by the root process of a
-   process tree.  We can't afford methodical changes during the lifetime of a 
+   process tree.  We can't afford methodical changes during the lifetime of a
    process tree. */
 void
 cygheap_pwdgrp::nss_init_line (const char *line)
@@ -778,7 +778,7 @@ cygheap_pwdgrp::nss_init_line (const char *line)
 		    *spc = L'\0';
 		}
 	      else
-	      	new_enums &= ~(ENUM_TDOMS | ENUM_TDOMS_ALL);
+		new_enums &= ~(ENUM_TDOMS | ENUM_TDOMS_ALL);
 	    }
 	  enums = new_enums;
 	}
@@ -896,7 +896,7 @@ fetch_windows_home (cyg_ldap *pldap, PUSER_INFO_3 ui, cygpsid &sid,
       WCHAR sidstr[128];
 
       if (get_user_profile_directory (sid.string (sidstr), profile, MAX_PATH))
-      	home = (char *) cygwin_create_path (CCP_WIN_W_TO_POSIX, profile);
+	home = (char *) cygwin_create_path (CCP_WIN_W_TO_POSIX, profile);
     }
   return home;
 }
@@ -950,9 +950,9 @@ fetch_from_path (cyg_ldap *pldap, PUSER_INFO_3 ui, cygpsid &sid, PCWSTR str,
   while (*str && w < we)
     {
       if (*str != L'%')
-      	*w++ = *str++;
+	*w++ = *str++;
       else
-      	{
+	{
 	  switch (*++str)
 	    {
 	    case L'u':
@@ -1135,7 +1135,7 @@ cygheap_pwdgrp::get_shell (cyg_ldap *pldap, cygpsid &sid, PCWSTR dom,
 	  break;
 	case NSS_SCHEME_PATH:
 	  shell = fetch_from_path (pldap, NULL, sid, shell_scheme[idx].attrib,
-	  			   dom, dnsdomain, name, full_qualified);
+				   dom, dnsdomain, name, full_qualified);
 	  break;
 	case NSS_SCHEME_FREEATTR:
 	  if (pldap->fetch_ad_account (sid, false, dnsdomain))
@@ -1305,11 +1305,11 @@ cygheap_pwdgrp::_nss_init ()
   char *buf = tp.c_get ();
 
   PCWSTR rel_path = L"\\etc\\nsswitch.conf";
-  path.Length = (wcslen (cygheap->installation_root) + wcslen (rel_path))
-		* sizeof (WCHAR);
+  path.Length = cygheap->installation_root.Length
+		+ wcslen (rel_path) * sizeof (WCHAR);
   path.MaximumLength = path.Length + sizeof (WCHAR);
   path.Buffer = (PWCHAR) alloca (path.MaximumLength);
-  wcpcpy (wcpcpy (path.Buffer, cygheap->installation_root), rel_path);
+  wcpcpy (wcpcpy (path.Buffer, cygheap->installation_root.Buffer), rel_path);
   InitializeObjectAttributes (&attr, &path, OBJ_CASE_INSENSITIVE,
 			      NULL, NULL);
   if (rl.init (&attr, buf, NT_MAX_PATH))
@@ -1547,7 +1547,7 @@ pwdgrp::add_account_post_fetch (char *line, bool lock)
   void *ret = NULL;
 
   if (line)
-    { 
+    {
       if (lock)
 	pglock.init ("pglock")->acquire ();
       if (add_line (line))
@@ -1645,16 +1645,16 @@ pwdgrp::add_group_from_windows (fetch_acc_t &full_acc, cyg_ldap *pldap)
 
 /* Check if file exists and if it has been written to since last checked.
    If file has been changed, invalidate the current cache.
-   
+
    If the file doesn't exist when this function is called the first time,
    by the first Cygwin process in a process tree, the file will never be
    visited again by any process in this process tree.  This is important,
    because we cannot allow a change of UID/GID values for the lifetime
    of a process tree.
-   
+
    If the file gets deleted or unreadable, the file cache will stay in
    place, but we won't try to read new accounts from the file.
-   
+
    The return code indicates to the calling function if the file exists. */
 bool
 pwdgrp::check_file ()
@@ -1665,11 +1665,12 @@ pwdgrp::check_file ()
   if (!path.Buffer)
     {
       PCWSTR rel_path = is_group () ? L"\\etc\\group" : L"\\etc\\passwd";
-      path.Length = (wcslen (cygheap->installation_root) + wcslen (rel_path))
-		    * sizeof (WCHAR);
+      path.Length = cygheap->installation_root.Length
+		    + wcslen (rel_path) * sizeof (WCHAR);
       path.MaximumLength = path.Length + sizeof (WCHAR);
       path.Buffer = (PWCHAR) cmalloc_abort (HEAP_BUF, path.MaximumLength);
-      wcpcpy (wcpcpy (path.Buffer, cygheap->installation_root), rel_path);
+      wcpcpy (wcpcpy (path.Buffer, cygheap->installation_root.Buffer),
+	      rel_path);
       InitializeObjectAttributes (&attr, &path, OBJ_CASE_INSENSITIVE,
 				  NULL, NULL);
     }
@@ -1793,24 +1794,132 @@ fetch_posix_offset (PDS_DOMAIN_TRUSTSW td, cyg_ldap *cldap)
   return td->PosixOffset;
 }
 
-/* CV 2014-05-08: USER_INFO_24 is not yet defined in Mingw64, but will be in
-   the next release.  For the time being, define the structure here with
-   another name which won't collide with the upcoming correct definition
-   in lmaccess.h. */
-struct cyg_USER_INFO_24
+/* If LookupAccountName fails, we check the name for a known constructed name
+   with this function.  Return true if we could create a valid SID from name
+   in sid.  sep is either a pointer to thr backslash in name, or NULL if name
+   is not a qualified DOMAIN\\name string. */
+bool
+pwdgrp::construct_sid_from_name (cygsid &sid, wchar_t *name, wchar_t *sep)
 {
-  BOOL   usri24_internet_identity;
-  DWORD  usri24_flags;
-  LPWSTR usri24_internet_provider_name;
-  LPWSTR usri24_internet_principal_name;
-  PSID   usri24_user_sid;
-};
+  unsigned long rid;
+  wchar_t *endptr;
+
+  if (sep && wcscmp (name, L"no\\body") == 0)
+    {
+      /* Special case "nobody" for reproducible construction of a
+	 nobody SID for WinFsp and similar services.  We use the
+	 value 65534 which is -2 with 16 bit uid/gids. */
+      sid.create (0, 1, 0xfffe);
+      return true;
+    }
+  if (sep && wcscmp (name, L"AzureAD\\Group") == 0)
+    {
+      get_azure_grp_sid ();
+      if (PSID (logon_sid) != NO_SID)
+	{
+	  sid = azure_grp_sid;
+	  return true;
+	}
+      return false;
+    }
+  if (!sep && wcscmp (name, L"CurrentSession") == 0)
+    {
+      get_logon_sid ();
+      if (PSID (logon_sid) == NO_SID)
+	return false;
+      sid = logon_sid;
+      return true;
+    }
+  if (!sep && wcscmp (name, L"Authentication authority asserted identity") == 0)
+    {
+      sid.create (18, 1, 1);
+      return true;
+    }
+  if (!sep && wcscmp (name, L"Service asserted identity") == 0)
+    {
+      sid.create (18, 1, 2);
+      return true;
+    }
+  if (sep && wcsncmp (name, L"Unix_", 5) == 0)
+    {
+      int type;
+
+      if (wcsncmp (name + 5, L"User\\", 5) == 0)
+	type = 1;
+      else if (wcsncmp (name + 5, L"Group\\", 6) == 0)
+	type = 2;
+      else
+	return false;
+
+      rid = wcstoul (sep + 1, &endptr, 10);
+      if (*endptr == L'\0')
+	{
+	  sid.create (22, 2, type, rid);
+	  return true;
+	}
+      return false;
+    }
+  /* At this point we have to check if the domain name is one of the
+     known domains, and if the account name is one of "User(DWORD)"
+     or "Group(DWORD)". */
+  if (sep)
+    {
+      wchar_t *numstr = NULL;
+      bool have_domain = false;
+
+      if (wcsncmp (sep + 1, L"User(", 5) == 0)
+	numstr = sep + 1 + 5;
+      else if (wcsncmp (sep + 1, L"Group(", 6) == 0)
+	numstr = sep + 1 + 6;
+      if (!numstr)
+	return false;
+      rid = wcstoul (numstr, &endptr, 10);
+      if (wcscmp (endptr, L")") != 0)
+	return false;
+
+      if (wcsncasecmp (name, cygheap->dom.account_flat_name (), sep - name)
+	  == 0)
+	{
+	  sid = cygheap->dom.account_sid ();
+	  have_domain = true;
+	}
+      else if (wcsncasecmp (name, cygheap->dom.primary_flat_name (), sep - name)
+	       == 0)
+	{
+	  sid = cygheap->dom.primary_sid ();
+	  have_domain = true;
+	}
+      else
+	{
+	  PDS_DOMAIN_TRUSTSW td = NULL;
+
+	  for (ULONG idx = 0; (td = cygheap->dom.trusted_domain (idx)); ++idx)
+	    {
+	      if (wcsncasecmp (name, td->NetbiosDomainName, sep - name) == 0)
+		{
+		  sid = td->DomainSid;
+		  have_domain = true;
+		  break;
+		}
+	    }
+	}
+      if (have_domain)
+	{
+	  sid.append (rid);
+	  return true;
+	}
+    }
+  return false;
+}
+
+/* CV 2018-08-28: SidTypeLogonSession is not yet defined in Mingw64. */
+#define SidTypeLogonSession 11
 
 char *
 pwdgrp::fetch_account_from_windows (fetch_user_arg_t &arg, cyg_ldap *pldap)
 {
   /* Used in LookupAccount calls. */
-  WCHAR namebuf[UNLEN + 1], *name = namebuf;
+  WCHAR namebuf[DNLEN + 1 + UNLEN + 1], *name = namebuf;
   WCHAR dom[DNLEN + 1] = L"";
   cygsid csid;
   DWORD nlen = UNLEN + 1;
@@ -1832,6 +1941,7 @@ pwdgrp::fetch_account_from_windows (fetch_user_arg_t &arg, cyg_ldap *pldap)
   char *gecos = NULL;
   /* Temporary stuff. */
   PWCHAR p;
+  PWCHAR val;
   WCHAR sidstr[128];
   ULONG posix_offset = 0;
   uint32_t id_val;
@@ -1852,7 +1962,7 @@ pwdgrp::fetch_account_from_windows (fetch_user_arg_t &arg, cyg_ldap *pldap)
 	*wcpncpy (dom, arg.full_acc->dom->Buffer,
 		  arg.full_acc->dom->Length / sizeof (WCHAR)) = L'\0';
 	acc_type = arg.full_acc->acc_type;
-      	ret = acc_type != SidTypeUnknown;
+	ret = acc_type != SidTypeUnknown;
       }
       break;
     case SID_arg:
@@ -1868,10 +1978,8 @@ pwdgrp::fetch_account_from_windows (fetch_user_arg_t &arg, cyg_ldap *pldap)
 	     can't be resolved, and if we're a domain member machine, ask a DC.
 	     Do *not* use LookupAccountSidW.  It can take ages when called on a
 	     DC for some weird reason.  Use LDAP instead. */
-	  PWCHAR val;
-
 	  if (cldap->fetch_ad_account (sid, true)
-	      && (val = cldap->get_group_name ()))
+	      && (val = cldap->get_account_name ()))
 	    {
 	      wcpcpy (name, val);
 	      wcpcpy (dom, L"BUILTIN");
@@ -1927,14 +2035,10 @@ pwdgrp::fetch_account_from_windows (fetch_user_arg_t &arg, cyg_ldap *pldap)
 	}
       if (!ret)
 	{
-	  if (!strcmp (arg.name, "no+body"))
-	    {
-	      /* Special case "nobody" for reproducible construction of a
-		 nobody SID for WinFsp and similar services.  We use the
-		 value 65534 which is -2 with 16 bit uid/gids. */
-	      csid.create (0, 1, 0xfffe);
-	      break;
-	    }
+	  /* For accounts which can't be resolved by Windows, try if
+	     it's one of the special names we use for special accounts. */
+	  if (construct_sid_from_name (csid, name, p))
+	    break;
 	  debug_printf ("LookupAccountNameW (%W), %E", name);
 	  return NULL;
 	}
@@ -2174,14 +2278,14 @@ pwdgrp::fetch_account_from_windows (fetch_user_arg_t &arg, cyg_ldap *pldap)
       if (acc_type == SidTypeUser
 	  && (sid_sub_auth_count (sid) <= 3 || sid_id_auth (sid) == 11))
 	acc_type = SidTypeWellKnownGroup;
-      switch (acc_type)
-      	{
+      switch ((int) acc_type)
+	{
 	case SidTypeUser:
 	  if (is_group ())
 	    {
 	      /* Don't allow users as group.  While this is technically
 		 possible, it doesn't make sense in a POSIX scenario.
-	 
+
 		 Microsoft Accounts as well as AzureAD accounts have the
 		 primary group SID in their user token set to their own
 		 user SID.
@@ -2192,7 +2296,7 @@ pwdgrp::fetch_account_from_windows (fetch_user_arg_t &arg, cyg_ldap *pldap)
 		its_ok = true;
 	      else if (wincap.has_microsoft_accounts ())
 		{
-		  struct cyg_USER_INFO_24 *ui24;
+		  USER_INFO_24 *ui24;
 		  if (NetUserGetInfo (NULL, name, 24, (PBYTE *) &ui24)
 		      == NERR_Success)
 		    {
@@ -2267,7 +2371,7 @@ pwdgrp::fetch_account_from_windows (fetch_user_arg_t &arg, cyg_ldap *pldap)
 		      /* This shouldn't happen, in theory, but it does.  There
 			 are cases where the user's logon domain does not show
 			 up in the list of trusted domains.  We're desperately
-			 trying to workaround that here bu adding an entry for
+			 trying to workaround that here by adding an entry for
 			 this domain to the trusted domains and ask the DC for
 			 a  posix_offset.  There's a good chance this doesn't
 			 work either, but at least we tried, and the user can
@@ -2329,12 +2433,17 @@ pwdgrp::fetch_account_from_windows (fetch_user_arg_t &arg, cyg_ldap *pldap)
 	      /* On AD machines, use LDAP to fetch domain account infos. */
 	      if (cygheap->dom.primary_dns_name ())
 		{
-		  /* For the current user we got the primary group from the
-		     user token.  For any other user we fetch it from AD. */
+		  /* For the current user we got correctly cased username and
+		     the primary group via process token.  For any other user
+		     we fetch it from AD and overwrite it. */
 		  if (!is_current_user
-		      && cldap->fetch_ad_account (sid, false, domain)
-		      && (id_val = cldap->get_primary_gid ()) != ILLEGAL_GID)
-		    gid = posix_offset + id_val;
+		      && cldap->fetch_ad_account (sid, false, domain))
+		    {
+		      if ((val = cldap->get_account_name ()))
+			wcscpy (name, val);
+		      if ((id_val = cldap->get_primary_gid ()) != ILLEGAL_GID)
+			gid = posix_offset + id_val;
+		    }
 		  home = cygheap->pg.get_home (cldap, sid, dom, domain,
 					       name, fully_qualified_name);
 		  shell = cygheap->pg.get_shell (cldap, sid, dom, domain,
@@ -2362,7 +2471,7 @@ pwdgrp::fetch_account_from_windows (fetch_user_arg_t &arg, cyg_ldap *pldap)
 		  WCHAR server[INTERNET_MAX_HOST_NAME_LENGTH + 3];
 		  NET_API_STATUS nas;
 		  PUSER_INFO_3 ui;
-		  
+
 		  if (!get_logon_server (cygheap->dom.primary_flat_name (),
 					 server, DS_IS_FLAT_NAME))
 		    break;
@@ -2372,6 +2481,8 @@ pwdgrp::fetch_account_from_windows (fetch_user_arg_t &arg, cyg_ldap *pldap)
 		      debug_printf ("NetUserGetInfo(%W) %u", name, nas);
 		      break;
 		    }
+		  /* Overwrite name to be sure case is same as in SAM */
+		  wcscpy (name, ui->usri3_name);
 		  gid = posix_offset + ui->usri3_primary_group_id;
 		  home = cygheap->pg.get_home (ui, sid, dom, name,
 					       fully_qualified_name);
@@ -2398,6 +2509,8 @@ pwdgrp::fetch_account_from_windows (fetch_user_arg_t &arg, cyg_ldap *pldap)
 		      debug_printf ("NetUserGetInfo(%W) %u", name, nas);
 		      break;
 		    }
+		  /* Overwrite name to be sure case is same as in SAM */
+		  wcscpy (name, ui->usri3_name);
 		  /* Fetch user attributes. */
 		  home = cygheap->pg.get_home (ui, sid, dom, name,
 					       fully_qualified_name);
@@ -2418,6 +2531,8 @@ pwdgrp::fetch_account_from_windows (fetch_user_arg_t &arg, cyg_ldap *pldap)
 		      debug_printf ("NetLocalGroupGetInfo(%W) %u", name, nas);
 		      break;
 		    }
+		  /* Overwrite name to be sure case is same as in SAM */
+		  wcscpy (name, gi->lgrpi1_name);
 		  /* Fetch unix gid from comment field. */
 		  uxid = fetch_from_description (gi->lgrpi1_comment,
 						 L"unix=\"", 6);
@@ -2504,6 +2619,26 @@ pwdgrp::fetch_account_from_windows (fetch_user_arg_t &arg, cyg_ldap *pldap)
 	  if (uid == 0x10000 || uid == 0x10100)
 	    return NULL;
 	  break;
+	case SidTypeLogonSession:
+	  /* Starting with Windows 10, LookupAccountSid/Name return valid
+	     info for the login session with new SID_NAME_USE value
+	     SidTypeLogonSession.  To return the same info as on
+	     pre-Windows 10, we have to handle this type explicitely here
+	     now and convert the name to "CurrentSession". */
+	  get_logon_sid ();
+	  if (PSID (logon_sid) == NO_SID)
+	    return NULL;
+	  if (RtlEqualSid (sid, logon_sid))
+	    {
+	      uid = 0xfff;
+	      wcpcpy (name = namebuf, L"CurrentSession");
+	    }
+	  else
+	    {
+	      uid = 0xffe;
+	      wcpcpy (name = namebuf, L"OtherSession");
+	    }
+	  break;
 	case SidTypeLabel:
 	  uid = 0x60000 + sid_sub_auth_rid (sid);
 	  fully_qualified_name = cygheap->pg.nss_prefix_always ();
@@ -2511,7 +2646,7 @@ pwdgrp::fetch_account_from_windows (fetch_user_arg_t &arg, cyg_ldap *pldap)
 	default:
 	  return NULL;
 	}
-    } 
+    }
   else if (sid_id_auth (sid) == 0 && sid_sub_auth (sid, 0) == 0xfffe)
     {
       /* Special case "nobody" for reproducible construction of a
@@ -2558,7 +2693,7 @@ pwdgrp::fetch_account_from_windows (fetch_user_arg_t &arg, cyg_ldap *pldap)
   else if (sid_id_auth (sid) == 18)
     {
       /* Authentication assertion SIDs.
-      
+
          Available when using a 2012R2 DC, but not supported by
 	 LookupAccountXXX on pre Windows 8/2012 machines */
       uid = 0x11200 + sid_sub_auth_rid (sid);

@@ -11,6 +11,8 @@ __stack_chk_guard DATA
 _check_for_executable DATA
 _ctype_ DATA
 _daylight DATA
+_fe_dfl_env DATA
+_fe_nomask_env DATA
 _impure_ptr DATA
 _sys_errlist DATA
 _sys_nerr DATA
@@ -96,6 +98,7 @@ __res_querydomain SIGFE
 __res_search SIGFE
 __res_send SIGFE
 __res_state SIGFE
+__sched_getaffinity_sys SIGFE
 __signbitd NOSIGFE
 __signbitf NOSIGFE
 __signgam NOSIGFE
@@ -193,6 +196,13 @@ acosh NOSIGFE
 acoshf NOSIGFE
 acoshl NOSIGFE
 acosl NOSIGFE
+aio_cancel SIGFE
+aio_error NOSIGFE
+aio_fsync SIGFE
+aio_read SIGFE
+aio_return NOSIGFE
+aio_suspend SIGFE
+aio_write SIGFE
 alarm SIGFE
 aligned_alloc SIGFE
 alphasort NOSIGFE
@@ -274,6 +284,9 @@ catanh NOSIGFE
 catanhf NOSIGFE
 catanhl NOSIGFE
 catanl NOSIGFE
+catclose SIGFE
+catgets SIGFE
+catopen SIGFE
 cbrt NOSIGFE
 cbrtf NOSIGFE
 cbrtl NOSIGFE
@@ -303,6 +316,7 @@ cimag NOSIGFE
 cimagf NOSIGFE
 cimagl NOSIGFE
 cleanup_glue NOSIGFE
+clearenv SIGFE
 clearerr SIGFE
 clearerr_unlocked SIGFE
 clock SIGFE
@@ -380,6 +394,16 @@ cygwin_stackdump SIGFE
 cygwin_umount SIGFE
 cygwin_winpid_to_pid SIGFE
 daemon SIGFE
+dbm_clearerr SIGFE
+dbm_close SIGFE
+dbm_delete SIGFE
+dbm_dirfno SIGFE
+dbm_error SIGFE
+dbm_fetch SIGFE
+dbm_firstkey SIGFE
+dbm_nextkey SIGFE
+dbm_open SIGFE
+dbm_store SIGFE
 difftime NOSIGFE
 dirfd SIGFE
 dirname NOSIGFE
@@ -837,6 +861,7 @@ lgammal_r NOSIGFE
 lgetxattr SIGFE
 link SIGFE
 linkat SIGFE
+lio_listio SIGFE
 listen = cygwin_listen SIGFE
 listxattr SIGFE
 llabs NOSIGFE
@@ -893,7 +918,6 @@ malloc_stats SIGFE
 malloc_trim SIGFE
 malloc_usable_size SIGFE
 mallopt SIGFE
-matherr NOSIGFE
 mblen NOSIGFE
 mbrlen NOSIGFE
 mbrtowc NOSIGFE
@@ -1071,6 +1095,7 @@ pthread_create SIGFE
 pthread_detach SIGFE
 pthread_equal SIGFE
 pthread_exit SIGFE
+pthread_getaffinity_np SIGFE
 pthread_getattr_np SIGFE
 pthread_getconcurrency SIGFE
 pthread_getcpuclockid SIGFE
@@ -1115,6 +1140,7 @@ pthread_rwlockattr_getpshared SIGFE
 pthread_rwlockattr_init SIGFE
 pthread_rwlockattr_setpshared SIGFE
 pthread_self SIGFE
+pthread_setaffinity_np SIGFE
 pthread_setcancelstate SIGFE
 pthread_setcanceltype SIGFE
 pthread_setconcurrency SIGFE
@@ -1131,6 +1157,8 @@ pthread_spin_trylock SIGFE
 pthread_spin_unlock SIGFE
 pthread_suspend SIGFE
 pthread_testcancel SIGFE
+pthread_timedjoin_np SIGFE
+pthread_tryjoin_np SIGFE
 pthread_yield = sched_yield SIGFE
 ptsname SIGFE
 ptsname_r SIGFE
@@ -1233,12 +1261,16 @@ scandirat SIGFE
 scanf SIGFE
 sched_get_priority_max SIGFE
 sched_get_priority_min SIGFE
+sched_getaffinity SIGFE
+sched_getcpu SIGFE
 sched_getparam SIGFE
 sched_getscheduler NOSIGFE
 sched_rr_get_interval SIGFE
+sched_setaffinity SIGFE
 sched_setparam SIGFE
 sched_setscheduler SIGFE
 sched_yield SIGFE
+secure_getenv NOSIGFE
 seed48 NOSIGFE
 seekdir SIGFE
 select = cygwin_select SIGFE
@@ -1316,6 +1348,7 @@ siginterrupt SIGFE
 sigismember SIGFE
 siglongjmp NOSIGFE
 signal SIGFE
+signalfd SIGFE
 significand NOSIGFE
 significandf NOSIGFE
 sigpause SIGFE
@@ -1467,8 +1500,12 @@ timegm NOSIGFE
 timelocal SIGFE
 timer_create SIGFE
 timer_delete SIGFE
+timer_getoverrun SIGFE
 timer_gettime SIGFE
 timer_settime SIGFE
+timerfd_create SIGFE
+timerfd_gettime SIGFE
+timerfd_settime SIGFE
 times SIGFE
 timezone SIGFE
 timingsafe_bcmp NOSIGFE
@@ -1501,6 +1538,7 @@ ualarm SIGFE
 umask NOSIGFE
 umount SIGFE
 uname SIGFE
+uname_x SIGFE
 ungetc SIGFE
 ungetwc SIGFE
 unlink SIGFE

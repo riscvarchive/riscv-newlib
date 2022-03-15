@@ -30,6 +30,7 @@ details. */
 #include "shared_info.h"
 #include "ntdll.h"
 
+/* If this is not NULL, it points to memory allocated by us. */
 static char **lastenviron;
 
 /* Parse CYGWIN options */
@@ -483,6 +484,9 @@ my_findenv (const char *name, int *offset)
   register char **p;
   const char *c;
 
+  if (cur_environ () == NULL)
+    return NULL;
+
   c = name;
   len = 0;
   while (*c && *c != '=')
@@ -545,13 +549,28 @@ _getenv_r (struct _reent *, const char *name)
   return findenv_func (name, &offset);
 }
 
+/* Like getenv, but returns NULL if effective and real UID/GIDs do not match */
+extern "C" char *
+secure_getenv (const char *name)
+{
+  int offset;
+  if (cygheap->user.issetuid ())
+    return NULL;
+  return findenv_func (name, &offset);
+}
+
+/* Return number of environment entries, including terminating NULL. */
 static int __stdcall
 envsize (const char * const *in_envp)
 {
   const char * const *envp;
+
+  if (in_envp == NULL)
+    return 0;
+
   for (envp = in_envp; *envp; envp++)
     continue;
-  return (1 + envp - in_envp) * sizeof (const char *);
+  return 1 + envp - in_envp;
 }
 
 /* Takes similar arguments to setenv except that overwrite is
@@ -582,19 +601,21 @@ _addenv (const char *name, const char *value, int overwrite)
   else
     {				/* Create new slot. */
       int sz = envsize (cur_environ ());
-      int allocsz = sz + (2 * sizeof (char *));
 
-      offset = (sz - 1) / sizeof (char *);
+      /* If sz == 0, we need two new slots, one for the terminating NULL. */
+      int newsz = sz == 0 ? 2 : sz + 1;
+      int allocsz = newsz * sizeof (char *);
 
-      /* Allocate space for additional element plus terminating NULL. */
+      offset = newsz - 2;
+
+      /* Allocate space for additional element. */
       if (cur_environ () == lastenviron)
-	lastenviron = __cygwin_environ = (char **) realloc (cur_environ (),
+	lastenviron = __cygwin_environ = (char **) realloc (lastenviron,
 							    allocsz);
-      else if ((lastenviron = (char **) malloc (allocsz)) != NULL)
-	__cygwin_environ = (char **) memcpy ((char **) lastenviron,
-					     __cygwin_environ, sz);
-
-      if (!__cygwin_environ)
+      else if ((lastenviron = (char **) realloc (lastenviron, allocsz)) != NULL)
+	__cygwin_environ = (char **) memcpy (lastenviron, __cygwin_environ,
+					     sz * sizeof (char *));
+      if (!lastenviron)
 	{
 #ifdef DEBUGGING
 	  try_to_debug ();
@@ -623,7 +644,7 @@ _addenv (const char *name, const char *value, int overwrite)
 	return -1;		/* Oops.  No more memory. */
 
       /* Put name '=' value into current slot. */
-      strncpy (envhere, name, namelen);
+      memcpy (envhere, name, namelen);
       envhere[namelen] = '=';
       strcpy (envhere + namelen + 1, value);
     }
@@ -700,6 +721,26 @@ unsetenv (const char *name)
 	  if (!(*e = *(e + 1)))
 	    break;
 
+      return 0;
+    }
+  __except (EFAULT) {}
+  __endtry
+  return -1;
+}
+
+/* Clear the environment.  */
+extern "C" int
+clearenv (void)
+{
+  __try
+    {
+      if (cur_environ () == lastenviron)
+	{
+	  free (lastenviron);
+	  lastenviron = NULL;
+	}
+      __cygwin_environ = NULL;
+      update_envptrs ();
       return 0;
     }
   __except (EFAULT) {}
@@ -818,6 +859,7 @@ environ_init (char **envp, int envc)
   __endtry
 }
 
+int sawTERM = 0;
 
 char ** __reg2
 win32env_to_cygenv (PWCHAR rawenv, bool posify)
@@ -827,8 +869,8 @@ win32env_to_cygenv (PWCHAR rawenv, bool posify)
   int envc;
   char *newp;
   int i;
-  int sawTERM = 0;
-  static char NO_COPY cygterm[] = "TERM=cygwin";
+  const char cygterm[] = "TERM=cygwin";
+  const char xterm[] = "TERM=xterm-256color";
   char *tmpbuf = tp.t_get ();
   PWCHAR w;
 
@@ -858,8 +900,10 @@ win32env_to_cygenv (PWCHAR rawenv, bool posify)
       debug_printf ("%p: %s", envp[i], envp[i]);
     }
 
+  /* If console has 24 bit color capability, TERM=xterm-256color,
+     otherwise, TERM=cygwin */
   if (!sawTERM)
-    envp[i++] = strdup (cygterm);
+    envp[i++] = strdup (wincap.has_con_24bit_colors () ? xterm : cygterm);
 
   envp[i] = NULL;
   return envp;
@@ -1023,7 +1067,12 @@ build_env (const char * const *envp, PWCHAR &envblock, int &envc,
   char **dstp;
   bool saw_spenv[SPENVS_SIZE] = {0};
 
+  static char *const empty_env[] = { NULL };
+
   debug_printf ("envp %p", envp);
+
+  if (!envp)
+    envp = empty_env;
 
   /* How many elements? */
   for (n = 0; envp[n]; n++)
@@ -1246,10 +1295,11 @@ build_env (const char * const *envp, PWCHAR &envblock, int &envc,
 	 during execve. */
       if (!saw_PATH)
 	{
-	  new_tl += cygheap->installation_dir_len + 5;
+	  new_tl += cygheap->installation_dir.Length / sizeof (WCHAR) + 5 + 1;
 	  if (new_tl > tl)
 	    tl = raise_envblock (new_tl, envblock, s);
-	  s = wcpcpy (wcpcpy (s, L"PATH="), cygheap->installation_dir) + 1;
+	  s = wcpcpy (wcpcpy (s, L"PATH="),
+		      cygheap->installation_dir.Buffer) + 1;
 	}
       *s = L'\0';			/* Two null bytes at the end */
       assert ((s - envblock) <= tl);	/* Detect if we somehow ran over end

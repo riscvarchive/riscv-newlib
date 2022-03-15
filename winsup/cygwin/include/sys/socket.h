@@ -11,7 +11,6 @@ details. */
 
 #include <features.h>
 #include <cygwin/socket.h>
-#include <sys/time.h>
 
 #ifdef __cplusplus
 extern "C"
@@ -41,7 +40,7 @@ extern "C"
   int shutdown (int, int);
   int socket (int __family, int __type, int __protocol);
   int sockatmark (int __fd);
-  int socketpair (int __domain, int __type, int __protocol, int *__socket_vec);
+  int socketpair (int __domain, int __type, int __protocol, int __fds[2]);
 
   struct servent *getservbyname (const char *__name, const char *__proto);
 #endif

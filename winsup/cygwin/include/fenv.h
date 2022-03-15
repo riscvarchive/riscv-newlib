@@ -24,7 +24,7 @@ extern "C" {
      C99 Language spec (draft n1256):
    <url unknown>
 
-     Intel® 64 and IA-32 Architectures Software Developer’s Manuals:
+     Intel(R) 64 and IA-32 Architectures Software Developer's Manuals:
    http://www.intel.com/products/processor/manuals/
 
      GNU C library manual pages:
@@ -87,16 +87,13 @@ typedef __uint32_t fexcept_t;
 #define FE_OVERFLOW	(1 << 3)
 #define FE_UNDERFLOW	(1 << 4)
 
-/*  This is not defined by Posix, but since x87 supports it we provide
-   a definition according to the same naming scheme used above.  */
-#define FE_DENORMAL	(1 << 1)
-
 /*  The <fenv.h> header shall define the following constant, which is
    simply the bitwise-inclusive OR of all floating-point exception
    constants defined above:  */
 
-#define FE_ALL_EXCEPT (FE_DIVBYZERO | FE_INEXACT | FE_INVALID \
-			| FE_OVERFLOW | FE_UNDERFLOW | FE_DENORMAL)
+/* in agreement w/ Linux the subnormal exception will always be masked */
+#define FE_ALL_EXCEPT \
+  (FE_INEXACT | FE_UNDERFLOW | FE_OVERFLOW | FE_DIVBYZERO | FE_INVALID)
 
 /*  The <fenv.h> header shall define the following constants if and only
    if the implementation supports getting and setting the represented
@@ -109,11 +106,14 @@ typedef __uint32_t fexcept_t;
 #define FE_TOWARDZERO	(3)
 #define FE_UPWARD	(2)
 
-/*  Precision bit values.  Not defined by Posix, but follow logically.  */
-#define FE_SINGLEPREC	(0)
-#define FE_RESERVEDPREC	(1)
-#define FE_DOUBLEPREC	(2)
-#define FE_EXTENDEDPREC	(3)
+/* Only Solaris and QNX implement fegetprec/fesetprec.  As Solaris, use the
+   values defined by http://www.open-std.org/jtc1/sc22//WG14/www/docs/n752.htm
+   QNX defines different values. */
+#if __MISC_VISIBLE
+#define FE_FLTPREC	(0)
+#define FE_DBLPREC	(2)
+#define FE_LDBLPREC	(3)
+#endif
 
 /*  The <fenv.h> header shall define the following constant, which
    represents the default floating-point environment (that is, the one
@@ -141,30 +141,34 @@ extern const fenv_t *_fe_nomask_env;
 
 /*  The following shall be declared as functions and may also be
    defined as macros. Function prototypes shall be provided.  */
-extern int feclearexcept (int excepts);
-extern int fegetexceptflag (fexcept_t *flagp, int excepts);
-extern int feraiseexcept (int excepts);
-extern int fesetexceptflag (const fexcept_t *flagp, int excepts);
-extern int fetestexcept (int excepts);
+extern int feclearexcept (int __excepts);
+extern int fegetexceptflag (fexcept_t *__flagp, int __excepts);
+extern int feraiseexcept (int __excepts);
+extern int fesetexceptflag (const fexcept_t *__flagp, int __excepts);
+extern int fetestexcept (int __excepts);
 extern int fegetround (void);
-extern int fesetround (int round);
-extern int fegetenv (fenv_t *envp);
-extern int feholdexcept (fenv_t *envp);
-extern int fesetenv (const fenv_t *envp);
-extern int feupdateenv (const fenv_t *envp);
+extern int fesetround (int __round);
+extern int fegetenv (fenv_t *__envp);
+extern int feholdexcept (fenv_t *__envp);
+extern int fesetenv (const fenv_t *__envp);
+extern int feupdateenv (const fenv_t *__envp);
 
-/* These are not defined in Posix, but make sense by obvious extension.  */
-extern int fegetprec (void);
-extern int fesetprec (int prec);
-
-/* This is Cygwin-custom, not from the standard, for use in the Cygwin CRT.  */
-extern void _feinitialise (void);
-
+#if __GNU_VISIBLE
 /* These are GNU extensions defined in glibc.  */
-extern int feenableexcept (int excepts);
-extern int fedisableexcept (int excepts);
+extern int feenableexcept (int __excepts);
+extern int fedisableexcept (int __excepts);
 extern int fegetexcept (void);
+#endif
 
+#if __MISC_VISIBLE
+extern int fegetprec (void);
+extern int fesetprec (int __prec);
+#endif
+
+#ifdef __INSIDE_CYGWIN__
+/* This is Cygwin-custom, not from the standard, for use in the Cygwin CRT.  */
+extern void _feinitialise ();
+#endif
 
 #ifdef __cplusplus
 }

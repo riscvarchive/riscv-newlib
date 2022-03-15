@@ -27,6 +27,7 @@ details. */
 #include "child_info.h"
 #include "ntdll.h"
 #include "exception.h"
+#include "posix_timer.h"
 
 /* Definitions for code simplification */
 #ifdef __x86_64__
@@ -41,6 +42,7 @@ details. */
 
 #define CALL_HANDLER_RETRY_OUTER 10
 #define CALL_HANDLER_RETRY_INNER 10
+#define DUMPSTACK_FRAME_LIMIT    32
 
 PWCHAR debugger_command;
 extern uint8_t _sigbe;
@@ -200,7 +202,7 @@ cygwin_exception::dump_exception ()
   small_printf ("r14=%016X r15=%016X\r\n", ctx->R14, ctx->R15);
   small_printf ("rbp=%016X rsp=%016X\r\n", ctx->Rbp, ctx->Rsp);
   small_printf ("program=%W, pid %u, thread %s\r\n",
-		myself->progname, myself->pid, cygthread::name ());
+		myself->progname, myself->pid, mythreadname ());
 #else
   if (exception_name)
     small_printf ("Exception: %s at eip=%08x\r\n", exception_name, ctx->Eip);
@@ -210,7 +212,7 @@ cygwin_exception::dump_exception ()
 		ctx->Eax, ctx->Ebx, ctx->Ecx, ctx->Edx, ctx->Esi, ctx->Edi);
   small_printf ("ebp=%08x esp=%08x program=%W, pid %u, thread %s\r\n",
 		ctx->Ebp, ctx->Esp, myself->progname, myself->pid,
-		cygthread::name ());
+		mythreadname ());
 #endif
   small_printf ("cs=%04x ds=%04x es=%04x fs=%04x gs=%04x ss=%04x\r\n",
 		ctx->SegCs, ctx->SegDs, ctx->SegEs, ctx->SegFs,
@@ -381,7 +383,7 @@ cygwin_exception::dumpstack ()
 #else
       small_printf ("Stack trace:\r\nFrame     Function  Args\r\n");
 #endif
-      for (i = 0; i < 16 && thestack++; i++)
+      for (i = 0; i < DUMPSTACK_FRAME_LIMIT && thestack++; i++)
 	{
 	  small_printf (_AFMT "  " _AFMT, thestack.sf.AddrFrame.Offset,
 			thestack.sf.AddrPC.Offset);
@@ -391,7 +393,8 @@ cygwin_exception::dumpstack ()
 	  small_printf (")\r\n");
 	}
       small_printf ("End of stack trace%s\n",
-		    i == 16 ? " (more stack frames may be present)" : "");
+		    i == DUMPSTACK_FRAME_LIMIT ?
+		        " (more stack frames may be present)" : "");
       if (h)
 	NtClose (h);
     }
@@ -649,9 +652,15 @@ exception::handle (EXCEPTION_RECORD *e, exception_list *frame, CONTEXT *in,
   /* Coerce win32 value to posix value.  */
   switch (e->ExceptionCode)
     {
-    case STATUS_FLOAT_DENORMAL_OPERAND:
     case STATUS_FLOAT_DIVIDE_BY_ZERO:
+      si.si_signo = SIGFPE;
+      si.si_code = FPE_FLTDIV;
+      break;
+    case STATUS_FLOAT_DENORMAL_OPERAND:
     case STATUS_FLOAT_INVALID_OPERATION:
+      si.si_signo = SIGFPE;
+      si.si_code = FPE_FLTINV;
+      break;
     case STATUS_FLOAT_STACK_CHECK:
       si.si_signo = SIGFPE;
       si.si_code = FPE_FLTSUB;
@@ -800,26 +809,6 @@ exception::handle (EXCEPTION_RECORD *e, exception_list *frame, CONTEXT *in,
       return ExceptionContinueExecution;
     }
 
-  /* FIXME: Probably should be handled in signal processing code */
-  if ((NTSTATUS) e->ExceptionCode == STATUS_ACCESS_VIOLATION)
-    {
-      int error_code = 0;
-      if (si.si_code == SEGV_ACCERR)	/* Address present */
-	error_code |= 1;
-      if (e->ExceptionInformation[0])	/* Write access */
-	error_code |= 2;
-      if (!me.inside_kernel (in))	/* User space */
-	error_code |= 4;
-      klog (LOG_INFO,
-#ifdef __x86_64__
-	    "%s[%d]: segfault at %011X rip %011X rsp %011X error %d",
-#else
-	    "%s[%d]: segfault at %08x rip %08x rsp %08x error %d",
-#endif
-	    __progname, myself->pid,
-	    e->ExceptionInformation[1], in->_GR(ip), in->_GR(sp),
-	    error_code);
-    }
   cygwin_exception exc (framep, in, e);
   si.si_cyg = (void *) &exc;
   /* POSIX requires that for SIGSEGV and SIGBUS, si_addr should be set to the
@@ -962,7 +951,7 @@ _cygtls::interrupt_setup (siginfo_t& si, void *handler, struct sigaction& siga)
   if (incyg)
     set_signal_arrived ();
 
-  if (!have_execed)
+  if (!have_execed && !(myself->exec_sendsig && !ch_spawn.iscygwin ()))
     proc_subproc (PROC_CLEARWAIT, 1);
   sigproc_printf ("armed signal_arrived %p, signal %d",
 		  signal_arrived, si.si_signo);
@@ -1147,7 +1136,7 @@ ctrl_c_handler (DWORD type)
      handled *by* the process group leader. */
   if (t && (!have_execed || have_execed_cygwin)
       && t->getpgid () == myself->pid &&
-      (GetTickCount () - t->last_ctrl_c) >= MIN_CTRL_C_SLOP)
+      (GetTickCount64 () - t->last_ctrl_c) >= MIN_CTRL_C_SLOP)
     /* Otherwise we just send a SIGINT to the process group and return TRUE
        (to indicate that we have handled the signal).  At this point, type
        should be a CTRL_C_EVENT or CTRL_BREAK_EVENT. */
@@ -1157,9 +1146,9 @@ ctrl_c_handler (DWORD type)
       if (type == CTRL_BREAK_EVENT
 	  && t->ti.c_cc[VINTR] == 3 && t->ti.c_cc[VQUIT] == 3)
 	sig = SIGQUIT;
-      t->last_ctrl_c = GetTickCount ();
+      t->last_ctrl_c = GetTickCount64 ();
       t->kill_pgrp (sig);
-      t->last_ctrl_c = GetTickCount ();
+      t->last_ctrl_c = GetTickCount64 ();
       return TRUE;
     }
 
@@ -1487,6 +1476,8 @@ sigpacket::process ()
 
   if (handler == SIG_IGN)
     {
+      if (si.si_code == SI_TIMER)
+	((timer_tracker *) si.si_tid)->disarm_overrun_event ();
       sigproc_printf ("signal %d ignored", si.si_signo);
       goto done;
     }
@@ -1510,6 +1501,8 @@ sigpacket::process ()
 	  || si.si_signo == SIGCONT || si.si_signo == SIGWINCH
 	  || si.si_signo == SIGURG)
 	{
+	  if (si.si_code == SI_TIMER)
+	    ((timer_tracker *) si.si_tid)->disarm_overrun_event ();
 	  sigproc_printf ("signal %d default is currently ignore", si.si_signo);
 	  goto done;
 	}
@@ -1634,12 +1627,19 @@ _cygtls::call_signal_handler ()
 
       sigset_t this_oldmask = set_process_mask_delta ();
 
+      if (infodata.si_code == SI_TIMER)
+	{
+	  timer_tracker *tt = (timer_tracker *)
+			      infodata.si_tid;
+	  infodata.si_overrun = tt->disarm_overrun_event ();
+	}
+
       /* Save information locally on stack to pass to handler. */
       int thissig = sig;
       siginfo_t thissi = infodata;
       void (*thisfunc) (int, siginfo_t *, void *) = func;
 
-      ucontext_t *thiscontext = NULL;
+      ucontext_t *thiscontext = NULL, context_copy;
 
       /* Only make a context for SA_SIGINFO handlers */
       if (this_sa_flags & SA_SIGINFO)
@@ -1695,6 +1695,7 @@ _cygtls::call_signal_handler ()
 				    ? (uintptr_t) thissi.si_addr : 0;
 
 	  thiscontext = &context;
+	  context_copy = context;
 	}
 
       int this_errno = saved_errno;
@@ -1812,9 +1813,18 @@ _cygtls::call_signal_handler ()
 
       incyg = true;
 
-      set_signal_mask (_my_tls.sigmask, this_oldmask);
+      set_signal_mask (_my_tls.sigmask, (this_sa_flags & SA_SIGINFO)
+					? context.uc_sigmask : this_oldmask);
       if (this_errno >= 0)
 	set_errno (this_errno);
+      if (this_sa_flags & SA_SIGINFO)
+	{
+	  /* If more than just the sigmask in the context has been changed by
+	     the signal handler, call setcontext. */
+	  context_copy.uc_sigmask = context.uc_sigmask;
+	  if (memcmp (&context, &context_copy, sizeof context) != 0)
+	    setcontext (&context);
+	}
     }
 
   /* FIXME: Since 2011 this return statement always returned 1 (meaning
@@ -1859,7 +1869,8 @@ extern "C" int
 setcontext (const ucontext_t *ucp)
 {
   PCONTEXT ctx = (PCONTEXT) &ucp->uc_mcontext;
-  _my_tls.sigmask = ucp->uc_sigmask;
+  set_signal_mask (_my_tls.sigmask, ucp->uc_sigmask);
+  _my_tls.incyg = true;
 #ifdef __x86_64__
   /* Apparently a call to NtContinue works on 64 bit as well, but using
      RtlRestoreContext is the blessed way. */

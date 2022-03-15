@@ -116,17 +116,23 @@ const _device dev_piper_storage =
 const _device dev_pipew_storage =
   {"", {FH_PIPEW}, "", exists_internal};
 
-const _device dev_tcp_storage =
-  {"", {FH_TCP}, "", exists_internal};
+const _device dev_signalfd_storage =
+  {"", {FH_SIGNALFD}, "", exists_internal};
 
-const _device dev_udp_storage =
-  {"", {FH_UDP}, "", exists_internal};
+const _device dev_timerfd_storage =
+  {"", {FH_TIMERFD}, "", exists_internal};
 
-const _device dev_stream_storage =
-  {"", {FH_STREAM}, "", exists_internal};
+const _device dev_socket_storage =
+  {"", {FH_SOCKET}, "", exists_internal};
 
-const _device dev_dgram_storage =
-  {"", {FH_DGRAM}, "", exists_internal};
+const _device dev_af_inet_storage =
+  {"", {FH_INET}, "", exists_internal};
+
+const _device dev_af_unix_storage =
+  {"", {FH_UNIX}, "", exists_internal};
+
+const _device dev_af_local_storage =
+  {"", {FH_LOCAL}, "", exists_internal};
 
 const _device dev_bad_storage =
   {"", {FH_NADA}, "", exists_internal};
@@ -158,7 +164,7 @@ const _device dev_error_storage =
 "/dev/urandom", BRACK(FH_URANDOM), "\\Device\\Null", exists_ntdev, S_IFCHR, =urandom_dev
 "/dev/clipboard", BRACK(FH_CLIPBOARD), "\\Device\\Null", exists_ntdev, S_IFCHR
 "/dev/com%(1-16)d", BRACK(FHDEV(DEV_SERIAL_MAJOR, {$1 - 1})), "\\??\\COM{$1}", exists_ntdev_silent, S_IFCHR
-"/dev/ttyS%(0-63)d", BRACK(FHDEV(DEV_SERIAL_MAJOR, {$1})), "\\??\\COM{$1 + 1}", exists_ntdev, S_IFCHR
+"/dev/ttyS%(0-127)d", BRACK(FHDEV(DEV_SERIAL_MAJOR, {$1})), "\\??\\COM{$1 + 1}", exists_ntdev, S_IFCHR
 ":pipe", BRACK(FH_PIPE), "/dev/pipe", exists_internal, S_IFCHR
 ":fifo", BRACK(FH_FIFO), "/dev/fifo", exists_internal, S_IFCHR
 "/dev/st%(0-127)d", BRACK(FHDEV(DEV_TAPE_MAJOR, {$1})), "\\Device\\Tape{$1}", exists_ntdev, S_IFBLK
@@ -166,7 +172,6 @@ const _device dev_error_storage =
 "/dev/fd%(0-15)d", BRACK(FHDEV(DEV_FLOPPY_MAJOR, {$1})), "\\Device\\Floppy{$1}", exists_ntdev, S_IFBLK
 "/dev/scd%(0-15)d", BRACK(FHDEV(DEV_CDROM_MAJOR, {$1})), "\\Device\\CdRom{$1}", exists_ntdev, S_IFBLK
 "/dev/sr%(0-15)d", BRACK(FHDEV(DEV_CDROM_MAJOR, {$1})), "\\Device\\CdRom{$1}", exists_ntdev, S_IFBLK
-"/dev/kmsg", BRACK(FH_KMSG), "\\Device\\MailSlot\\cygwin\\dev\\kmsg", exists_ntdev, S_IFCHR
 %other	{return	NULL;}
 %%
 #undef BRACK

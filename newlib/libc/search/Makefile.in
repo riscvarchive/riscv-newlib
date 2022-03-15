@@ -72,7 +72,8 @@ LIBRARIES = $(noinst_LIBRARIES)
 ARFLAGS = cru
 lib_a_AR = $(AR) $(ARFLAGS)
 lib_a_LIBADD =
-am__objects_1 = lib_a-bsearch.$(OBJEXT) lib_a-qsort.$(OBJEXT)
+am__objects_1 = lib_a-bsearch.$(OBJEXT) lib_a-ndbm.$(OBJEXT) \
+	lib_a-qsort.$(OBJEXT)
 @ELIX_LEVEL_1_FALSE@am__objects_2 = lib_a-hash.$(OBJEXT) \
 @ELIX_LEVEL_1_FALSE@	lib_a-hash_bigkey.$(OBJEXT) \
 @ELIX_LEVEL_1_FALSE@	lib_a-hash_buf.$(OBJEXT) \
@@ -93,7 +94,7 @@ am__objects_1 = lib_a-bsearch.$(OBJEXT) lib_a-qsort.$(OBJEXT)
 lib_a_OBJECTS = $(am_lib_a_OBJECTS)
 LTLIBRARIES = $(noinst_LTLIBRARIES)
 libsearch_la_LIBADD =
-am__objects_4 = bsearch.lo qsort.lo
+am__objects_4 = bsearch.lo ndbm.lo qsort.lo
 @ELIX_LEVEL_1_FALSE@am__objects_5 = hash.lo hash_bigkey.lo hash_buf.lo \
 @ELIX_LEVEL_1_FALSE@	hash_func.lo hash_log2.lo hash_page.lo \
 @ELIX_LEVEL_1_FALSE@	hcreate.lo hcreate_r.lo tdelete.lo \
@@ -279,6 +280,7 @@ GENERAL_SOURCES = \
 	db_local.h \
 	extern.h \
 	hash.h \
+	ndbm.c \
 	page.h \
 	qsort.c
 
@@ -403,6 +405,12 @@ lib_a-bsearch.o: bsearch.c
 
 lib_a-bsearch.obj: bsearch.c
 	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(lib_a_CFLAGS) $(CFLAGS) -c -o lib_a-bsearch.obj `if test -f 'bsearch.c'; then $(CYGPATH_W) 'bsearch.c'; else $(CYGPATH_W) '$(srcdir)/bsearch.c'; fi`
+
+lib_a-ndbm.o: ndbm.c
+	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(lib_a_CFLAGS) $(CFLAGS) -c -o lib_a-ndbm.o `test -f 'ndbm.c' || echo '$(srcdir)/'`ndbm.c
+
+lib_a-ndbm.obj: ndbm.c
+	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(lib_a_CFLAGS) $(CFLAGS) -c -o lib_a-ndbm.obj `if test -f 'ndbm.c'; then $(CYGPATH_W) 'ndbm.c'; else $(CYGPATH_W) '$(srcdir)/ndbm.c'; fi`
 
 lib_a-qsort.o: qsort.c
 	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(lib_a_CFLAGS) $(CFLAGS) -c -o lib_a-qsort.o `test -f 'qsort.c' || echo '$(srcdir)/'`qsort.c

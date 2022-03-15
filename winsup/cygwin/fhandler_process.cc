@@ -82,14 +82,10 @@ static const virt_tab_t process_tab[] =
 static const int PROCESS_LINK_COUNT =
   (sizeof (process_tab) / sizeof (virt_tab_t)) - 1;
 int get_process_state (DWORD dwProcessId);
-static bool get_mem_values (DWORD dwProcessId, unsigned long *vmsize,
-			    unsigned long *vmrss, unsigned long *vmtext,
-			    unsigned long *vmdata, unsigned long *vmlib,
-			    unsigned long *vmshare);
+static bool get_mem_values (DWORD dwProcessId, size_t &vmsize, size_t &vmrss,
+			    size_t &vmtext, size_t &vmdata, size_t &vmlib,
+			    size_t &vmshare);
 
-/* Returns 0 if path doesn't exist, >0 if path is a directory,
-   -1 if path is a file, -2 if path is a symlink, -3 if path is a pipe,
-   -4 if path is a socket. */
 virtual_ftype_t
 fhandler_process::exists ()
 {
@@ -170,12 +166,13 @@ fhandler_process::fstat (struct stat *buf)
       buf->st_uid = p->uid;
       buf->st_gid = p->gid;
       buf->st_mode |= S_IFDIR | S_IXUSR | S_IXGRP | S_IXOTH;
-      if (file_type == 1)
+      if (file_type == virt_directory)
 	buf->st_nlink = 2;
       else
 	buf->st_nlink = 3;
       return 0;
     case virt_symlink:
+    case virt_fdsymlink:
       buf->st_uid = p->uid;
       buf->st_gid = p->gid;
       buf->st_mode = S_IFLNK | S_IRWXU | S_IRWXG | S_IRWXO;
@@ -355,7 +352,7 @@ fhandler_process::fill_filebuf ()
 	}
       else
 	filesize = process_tab[fileid].format_func (p, filebuf);
-      return !filesize ? false : true;
+      return filesize < 0 ? false : true;
     }
   return false;
 }
@@ -389,16 +386,16 @@ format_process_fd (void *data, char *&destbuf)
       if (fd < 0 || e == fdp || (*e != '/' && *e != '\0'))
 	{
 	  set_errno (ENOENT);
-	  return 0;
+	  return -1;
 	}
       destbuf = p ? p->fd (fd, fs) : NULL;
       if (!destbuf || !*destbuf)
 	{
 	  set_errno (ENOENT);
-	  return 0;
+	  return -1;
 	}
       if (*e == '\0')
-	*((process_fd_t *) data)->fd_type = virt_symlink;
+	*((process_fd_t *) data)->fd_type = virt_fdsymlink;
       else /* trailing path */
 	{
 	  char *newbuf = (char *) cmalloc_abort (HEAP_STR, strlen (destbuf)
@@ -519,12 +516,9 @@ format_process_cmdline (void *data, char *&destbuf)
       destbuf = NULL;
     }
   destbuf = p ? p->cmdline (fs) : NULL;
-  if (!destbuf || !*destbuf)
-    {
-      destbuf = cstrdup ("<defunct>");
-      fs = strlen (destbuf) + 1;
-    }
-  return fs;
+  if (destbuf && *destbuf)
+    return fs;
+  return format_process_exename (data, destbuf);
 }
 
 static off_t
@@ -821,7 +815,22 @@ format_process_maps (void *data, char *&destbuf)
   HANDLE proc = OpenProcess (PROCESS_QUERY_INFORMATION
 			     | PROCESS_VM_READ, FALSE, p->dwProcessId);
   if (!proc)
-    return 0;
+    {
+      if (!(p->process_state & PID_EXITED))
+        {
+          DWORD error = GetLastError ();
+          __seterrno_from_win_error (error);
+          debug_printf ("OpenProcess: ret %u; pid: %d", error, p->dwProcessId);
+          return -1;
+        }
+      else
+        {
+          /* Else it's a zombie process; just return an empty string */
+          destbuf = (char *) crealloc_abort (destbuf, 1);
+          destbuf[0] = '\0';
+          return 0;
+        }
+    }
 
   NTSTATUS status;
   PROCESS_BASIC_INFORMATION pbi;
@@ -1065,10 +1074,10 @@ format_process_stat (void *data, char *&destbuf)
   char cmd[NAME_MAX + 1];
   int state = 'R';
   unsigned long fault_count = 0UL,
-		utime = 0UL, stime = 0UL,
-		start_time = 0UL,
 		vmsize = 0UL, vmrss = 0UL, vmmaxrss = 0UL;
-  int priority = 0;
+  uint64_t utime = 0ULL, stime = 0ULL, start_time = 0ULL;
+  int nice = 0;
+
   if (p->process_state & PID_EXITED)
     strcpy (cmd, "<defunct>");
   else
@@ -1092,74 +1101,60 @@ format_process_stat (void *data, char *&destbuf)
     state = 'T';
   else
     state = get_process_state (p->dwProcessId);
-  start_time = (GetTickCount () / 1000 - time (NULL) + p->start_time) * HZ;
 
   NTSTATUS status;
   HANDLE hProcess;
-  VM_COUNTERS vmc;
-  KERNEL_USER_TIMES put;
-  PROCESS_BASIC_INFORMATION pbi;
-  QUOTA_LIMITS ql;
-  SYSTEM_TIMEOFDAY_INFORMATION stodi;
-  SYSTEM_PROCESSOR_PERFORMANCE_INFORMATION spt;
-  hProcess = OpenProcess (PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_VM_READ,
+  VM_COUNTERS vmc = { 0 };
+  KERNEL_USER_TIMES put = { 0 };
+  QUOTA_LIMITS ql = { 0 };
+  SYSTEM_TIMEOFDAY_INFORMATION stodi = { 0 };
+
+  hProcess = OpenProcess (PROCESS_QUERY_LIMITED_INFORMATION,
 			  FALSE, p->dwProcessId);
-  if (hProcess != NULL)
+  if (hProcess == NULL)
+    {
+      if (!(p->process_state & PID_EXITED))
+        {
+          DWORD error = GetLastError ();
+          __seterrno_from_win_error (error);
+          debug_printf ("OpenProcess: ret %u; pid: %d", error, p->dwProcessId);
+          return -1;
+        }
+      /* Else it's a zombie process; just leave each structure zero'd */
+    }
+  else
     {
       status = NtQueryInformationProcess (hProcess, ProcessVmCounters,
 					  (PVOID) &vmc, sizeof vmc, NULL);
-      if (NT_SUCCESS (status))
-	status = NtQueryInformationProcess (hProcess, ProcessTimes,
-					    (PVOID) &put, sizeof put, NULL);
-      if (NT_SUCCESS (status))
-	status = NtQueryInformationProcess (hProcess, ProcessBasicInformation,
-					    (PVOID) &pbi, sizeof pbi, NULL);
-      if (NT_SUCCESS (status))
-	status = NtQueryInformationProcess (hProcess, ProcessQuotaLimits,
-					    (PVOID) &ql, sizeof ql, NULL);
+      if (!NT_SUCCESS (status))
+	debug_printf ("NtQueryInformationProcess(ProcessVmCounters): status %y",
+		      status);
+      status = NtQueryInformationProcess (hProcess, ProcessTimes,
+					  (PVOID) &put, sizeof put, NULL);
+      if (!NT_SUCCESS (status))
+	debug_printf ("NtQueryInformationProcess(ProcessTimes): status %y",
+		      status);
+      status = NtQueryInformationProcess (hProcess, ProcessQuotaLimits,
+					  (PVOID) &ql, sizeof ql, NULL);
+      if (!NT_SUCCESS (status))
+	debug_printf ("NtQueryInformationProcess(ProcessQuotaLimits): "
+		      "status %y", status);
+      nice = winprio_to_nice (GetPriorityClass (hProcess));
       CloseHandle (hProcess);
     }
-  else
-    {
-      DWORD error = GetLastError ();
-      __seterrno_from_win_error (error);
-      debug_printf ("OpenProcess: ret %u", error);
-      return 0;
-    }
-  if (NT_SUCCESS (status))
-    status = NtQuerySystemInformation (SystemTimeOfDayInformation,
-				       (PVOID) &stodi, sizeof stodi, NULL);
-  if (NT_SUCCESS (status))
-    status = NtQuerySystemInformation (SystemProcessorPerformanceInformation,
-				       (PVOID) &spt, sizeof spt, NULL);
+  status = NtQuerySystemInformation (SystemTimeOfDayInformation,
+				     (PVOID) &stodi, sizeof stodi, NULL);
   if (!NT_SUCCESS (status))
-    {
-      __seterrno_from_nt_status (status);
-      debug_printf ("NtQueryInformationProcess: status %y, %E", status);
-      return 0;
-    }
+    debug_printf ("NtQuerySystemInformation(SystemTimeOfDayInformation): "
+		  "status %y", status);
   fault_count = vmc.PageFaultCount;
-  utime = put.UserTime.QuadPart * HZ / 10000000ULL;
-  stime = put.KernelTime.QuadPart * HZ / 10000000ULL;
-#if 0
-   if (stodi.CurrentTime.QuadPart > put.CreateTime.QuadPart)
-     start_time = (spt.KernelTime.QuadPart + spt.UserTime.QuadPart -
-		   stodi.CurrentTime.QuadPart + put.CreateTime.QuadPart) * HZ / 10000000ULL;
-   else
-     /*
-      * sometimes stodi.CurrentTime is a bit behind
-      * Note: some older versions of procps are broken and can't cope
-      * with process start times > time(NULL).
-      */
-     start_time = (spt.KernelTme.QuadPart + spt.UserTime.QuadPart) * HZ / 10000000ULL;
-#endif
-  /* The BasePriority returned to a 32 bit process under WOW64 is
-     apparently broken, for 32 and 64 bit target processes.  64 bit
-     processes get the correct base priority, even for 32 bit processes. */
-  if (wincap.is_wow64 ())
-    priority = 8; /* Default value. */
+  utime = put.UserTime.QuadPart * CLOCKS_PER_SEC / NS100PERSEC;
+  stime = put.KernelTime.QuadPart * CLOCKS_PER_SEC / NS100PERSEC;
+  if (put.CreateTime.QuadPart)
+    start_time = (put.CreateTime.QuadPart - stodi.BootTime.QuadPart)
+		 * CLOCKS_PER_SEC / NS100PERSEC;
   else
-    priority = pbi.BasePriority;
+    start_time = (p->start_time - to_time_t (&stodi.BootTime)) * CLOCKS_PER_SEC;
   unsigned page_size = wincap.page_size ();
   vmsize = vmc.PagefileUsage;
   vmrss = vmc.WorkingSetSize / page_size;
@@ -1169,13 +1164,13 @@ format_process_stat (void *data, char *&destbuf)
   return __small_sprintf (destbuf, "%d (%s) %c "
 				   "%d %d %d %d %d "
 				   "%u %lu %lu %u %u %lu %lu "
-				   "%ld %ld %d %d %d %d "
-				   "%lu %lu "
-				   "%ld %lu",
+				   "%U %U %d %d %d %d "
+				   "%U %lu "
+				   "%ld %lu\n",
 			  p->pid, cmd, state,
 			  p->ppid, p->pgid, p->sid, p->ctty, -1,
 			  0, fault_count, fault_count, 0, 0, utime, stime,
-			  utime, stime, priority, 0, 0, 0,
+			  utime, stime, NZERO + nice, nice, 0, 0,
 			  start_time, vmsize,
 			  vmrss, vmmaxrss
 			  );
@@ -1188,8 +1183,7 @@ format_process_status (void *data, char *&destbuf)
   char cmd[NAME_MAX + 1];
   int state = 'R';
   const char *state_str = "unknown";
-  unsigned long vmsize = 0UL, vmrss = 0UL, vmdata = 0UL, vmlib = 0UL,
-		vmtext = 0UL, vmshare = 0UL;
+  size_t vmsize = 0, vmrss = 0, vmdata = 0, vmlib = 0, vmtext = 0, vmshare = 0;
 
   PWCHAR last_slash = wcsrchr (p->progname, L'\\');
   sys_wcstombs (cmd, NAME_MAX + 1, last_slash ? last_slash + 1 : p->progname);
@@ -1227,15 +1221,12 @@ format_process_status (void *data, char *&destbuf)
       state_str = "stopped";
       break;
     }
-  if (!get_mem_values (p->dwProcessId, &vmsize, &vmrss, &vmtext, &vmdata,
-		       &vmlib, &vmshare))
-    return 0;
-  unsigned page_size = wincap.allocation_granularity ();
-  vmsize *= page_size; vmrss *= page_size; vmdata *= page_size;
-  vmtext *= page_size; vmlib *= page_size;
+  get_mem_values (p->dwProcessId, vmsize, vmrss, vmtext, vmdata,
+		  vmlib, vmshare);
   /* The real uid value for *this* process is stored at cygheap->user.real_uid
      but we can't get at the real uid value for any other process, so
      just fake it as p->uid.  Similar for p->gid. */
+  size_t kb_per_page = wincap.allocation_granularity() / 1024;
   destbuf = (char *) crealloc_abort (destbuf, strlen (cmd) + 320);
   return __small_sprintf (destbuf, "Name:\t%s\n"
 				   "State:\t%c (%s)\n"
@@ -1244,13 +1235,13 @@ format_process_status (void *data, char *&destbuf)
 				   "PPid:\t%d\n"
 				   "Uid:\t%d %d %d %d\n"
 				   "Gid:\t%d %d %d %d\n"
-				   "VmSize:\t%8d kB\n"
-				   "VmLck:\t%8d kB\n"
-				   "VmRSS:\t%8d kB\n"
-				   "VmData:\t%8d kB\n"
-				   "VmStk:\t%8d kB\n"
-				   "VmExe:\t%8d kB\n"
-				   "VmLib:\t%8d kB\n"
+				   "VmSize:\t%8lu kB\n"
+				   "VmLck:\t%8lu kB\n"
+				   "VmRSS:\t%8lu kB\n"
+				   "VmData:\t%8lu kB\n"
+				   "VmStk:\t%8lu kB\n"
+				   "VmExe:\t%8lu kB\n"
+				   "VmLib:\t%8lu kB\n"
 				   "SigPnd:\t%016x\n"
 				   "SigBlk:\t%016x\n"
 				   "SigIgn:\t%016x\n",
@@ -1261,8 +1252,9 @@ format_process_status (void *data, char *&destbuf)
 			  p->ppid,
 			  p->uid, p->uid, p->uid, p->uid,
 			  p->gid, p->gid, p->gid, p->gid,
-			  vmsize >> 10, 0, vmrss >> 10, vmdata >> 10, 0,
-			  vmtext >> 10, vmlib >> 10,
+			  vmsize * kb_per_page, 0UL, vmrss * kb_per_page,
+			  vmdata * kb_per_page, 0UL, vmtext * kb_per_page,
+			  vmlib * kb_per_page,
 			  0, 0, _my_tls.sigmask
 			  );
 }
@@ -1271,18 +1263,15 @@ static off_t
 format_process_statm (void *data, char *&destbuf)
 {
   _pinfo *p = (_pinfo *) data;
-  unsigned long vmsize = 0UL, vmrss = 0UL, vmtext = 0UL, vmdata = 0UL,
-		vmlib = 0UL, vmshare = 0UL;
-  size_t page_scale;
-  if (!get_mem_values (p->dwProcessId, &vmsize, &vmrss, &vmtext, &vmdata,
-		       &vmlib, &vmshare))
-    return 0;
+  size_t vmsize = 0, vmrss = 0, vmtext = 0, vmdata = 0, vmlib = 0, vmshare = 0;
 
-  page_scale = wincap.allocation_granularity() / wincap.page_size();
+  if (!get_mem_values (p->dwProcessId, vmsize, vmrss, vmtext, vmdata,
+		       vmlib, vmshare) && !(p->process_state & PID_EXITED))
+    return -1;  /* Error out unless it's a zombie process */
+
   destbuf = (char *) crealloc_abort (destbuf, 96);
-  return __small_sprintf (destbuf, "%ld %ld %ld %ld %ld %ld 0\n",
-              vmsize / page_scale, vmrss / page_scale, vmshare / page_scale,
-              vmtext / page_scale, vmlib / page_scale, vmdata / page_scale);
+  return __small_sprintf (destbuf, "%lu %lu %lu %lu %lu %lu 0\n",
+			  vmsize, vmrss, vmshare, vmtext, vmlib, vmdata);
 }
 
 extern "C" {
@@ -1453,9 +1442,8 @@ out:
 }
 
 static bool
-get_mem_values (DWORD dwProcessId, unsigned long *vmsize, unsigned long *vmrss,
-		unsigned long *vmtext, unsigned long *vmdata,
-		unsigned long *vmlib, unsigned long *vmshare)
+get_mem_values (DWORD dwProcessId, size_t &vmsize, size_t &vmrss,
+		size_t &vmtext, size_t &vmdata, size_t &vmlib, size_t &vmshare)
 {
   bool res = false;
   NTSTATUS status;
@@ -1463,6 +1451,8 @@ get_mem_values (DWORD dwProcessId, unsigned long *vmsize, unsigned long *vmrss,
   VM_COUNTERS vmc;
   PMEMORY_WORKING_SET_LIST p;
   SIZE_T n = 0x4000, length;
+  const size_t page_scale = wincap.allocation_granularity()
+			    / wincap.page_size();
 
   /* This appears to work despite MSDN claiming that QueryWorkingSet requires
      PROCESS_QUERY_INFORMATION *and* PROCESS_VM_READ.  Since we're trying to do
@@ -1497,7 +1487,7 @@ get_mem_values (DWORD dwProcessId, unsigned long *vmsize, unsigned long *vmrss,
       debug_printf ("NtQueryVirtualMemory: status %y", status);
       if (status == STATUS_PROCESS_IS_TERMINATING)
 	{
-	  *vmsize = *vmrss = *vmtext = *vmdata = *vmlib = *vmshare = 0;
+	  vmsize = vmrss = vmtext = vmdata = vmlib = vmshare = 0;
 	  res = true;
 	}
       else
@@ -1506,17 +1496,17 @@ get_mem_values (DWORD dwProcessId, unsigned long *vmsize, unsigned long *vmrss,
     }
   for (unsigned long i = 0; i < p->NumberOfPages; i++)
     {
-      ++*vmrss;
+      ++vmrss;
       unsigned flags = p->WorkingSetList[i] & 0x0FFF;
       if ((flags & (WSLE_PAGE_EXECUTE | WSLE_PAGE_SHAREABLE))
 	  == (WSLE_PAGE_EXECUTE | WSLE_PAGE_SHAREABLE))
-	++*vmlib;
+	++vmlib;
       else if (flags & WSLE_PAGE_SHAREABLE)
-	++*vmshare;
+	++vmshare;
       else if (flags & WSLE_PAGE_EXECUTE)
-	++*vmtext;
+	++vmtext;
       else
-	++*vmdata;
+	++vmdata;
     }
   status = NtQueryInformationProcess (hProcess, ProcessVmCounters, (PVOID) &vmc,
 				      sizeof vmc, NULL);
@@ -1526,7 +1516,15 @@ get_mem_values (DWORD dwProcessId, unsigned long *vmsize, unsigned long *vmrss,
       __seterrno_from_nt_status (status);
       goto out;
     }
-  *vmsize = vmc.PagefileUsage / wincap.page_size ();
+  vmsize = vmc.PagefileUsage / wincap.page_size ();
+  /* Return number of Cygwin pages.  Page size in Cygwin is equivalent
+     to Windows allocation_granularity. */
+  vmsize = howmany (vmsize, page_scale);
+  vmrss = howmany (vmrss, page_scale);
+  vmshare = howmany (vmshare, page_scale);
+  vmtext = howmany (vmtext, page_scale);
+  vmlib = howmany (vmlib, page_scale);
+  vmdata = howmany (vmdata, page_scale);
   res = true;
 out:
   free (p);

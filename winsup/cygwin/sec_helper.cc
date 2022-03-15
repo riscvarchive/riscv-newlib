@@ -169,10 +169,16 @@ cygpsid::get_id (BOOL search_grp, int *type, cyg_ldap *pldap)
 	}
       else if ((pw = internal_getpwsid (*this, pldap)))
 	id = pw->pw_uid;
-      if (id != ILLEGAL_UID && type)
-	*type = USER;
+      if (id != ILLEGAL_UID)
+	{
+	  if (type)
+	    *type = USER;
+	  return id;
+	}
     }
-  return id;
+  if (type)
+    *type = 0; /* undefined type */
+  return ILLEGAL_UID;
 }
 
 PWCHAR
@@ -821,12 +827,16 @@ authz_ctx::get_user_attribute (mode_t *attribute, PSECURITY_DESCRIPTOR psd,
   if (RtlEqualSid (user_sid, cygheap->user.sid ())
       && !cygheap->user.issetuid ())
     {
+      /* Avoid lock in default case. */
       if (!user_ctx_hdl)
 	{
 	  authz_guard.acquire ();
-	  if (!AuthzInitializeContextFromToken (0, hProcToken, authz, NULL,
-						authz_dummy_luid, NULL,
-						&user_ctx_hdl))
+	  /* Check user_ctx_hdl again under lock to avoid overwriting
+	     user_ctx_hdl if it has already been initialized. */
+	  if (!user_ctx_hdl
+	      && !AuthzInitializeContextFromToken (0, hProcToken, authz, NULL,
+						   authz_dummy_luid, NULL,
+						   &user_ctx_hdl))
 	    debug_printf ("AuthzInitializeContextFromToken, %E");
 	  authz_guard.release ();
 	}

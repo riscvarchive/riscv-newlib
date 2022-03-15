@@ -119,7 +119,7 @@ getaclentry (action_t action, char *c, aclent_t *ace)
     }
   else if (!(ace->a_type & (USER_OBJ | GROUP_OBJ)))
     {
-      /* Mask and other entries may contain an extra colon. */
+      /* Mask and other entries may contain one or two colons. */
       if (*c == ':')
 	++c;
     }
@@ -536,7 +536,7 @@ usage (FILE *stream)
 "\n"
 "  -b, --remove-all       remove all extended ACL entries\n"
 "  -x, --delete           delete one or more specified ACL entries\n"
-"  -f, --file             set ACL entries for FILE to ACL entries read\n"
+"  -f, --set-file         set ACL entries for FILE to ACL entries read\n"
 "                         from ACL_FILE\n"
 "  -k, --remove-default   remove all default ACL entries\n"
 "  -m, --modify           modify one or more specified ACL entries\n"
@@ -558,8 +558,8 @@ usage (FILE *stream)
 "    u[ser]:uid:perm\n"
 "    g[roup]::perm\n"
 "    g[roup]:gid:perm\n"
-"    m[ask]:perm\n"
-"    o[ther]:perm\n"
+"    m[ask]:[:]perm\n"
+"    o[ther]:[:]perm\n"
 "\n"
 "  Default entries are like the above with the additional default identifier.\n"
 "  For example: \n"
@@ -595,7 +595,7 @@ usage (FILE *stream)
 "    d[efault]:m[ask][:]\n"
 "    d[efault]:o[ther][:]\n"
 "\n"
-"-f, --file\n"
+"-f, --set-file\n"
 "  Take the Acl_entries from ACL_FILE one per line.  Whitespace characters are\n"
 "  ignored, and the character \"#\" may be used to start a comment.  The special\n"
 "  filename \"-\" indicates reading from stdin.\n"
@@ -652,6 +652,7 @@ usage (FILE *stream)
 struct option longopts[] = {
   {"remove-all", no_argument, NULL, 'b'},
   {"delete", required_argument, NULL, 'x'},
+  {"set-file", required_argument, NULL, 'f'},
   {"file", required_argument, NULL, 'f'},
   {"remove-default", no_argument, NULL, 'k'},
   {"modify", required_argument, NULL, 'm'},

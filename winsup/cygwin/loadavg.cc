@@ -39,14 +39,7 @@
 #include <math.h>
 #include <time.h>
 #include <sys/strace.h>
-
-/* Prototype for PdhAddEnglishCounterA in pdh.h under _WIN32_WINNT >= 0x0600 is
-   missing WINAPI */
-#undef	_WIN32_WINNT
 #include <pdh.h>
-extern "C"
-PDH_FUNCTION PdhAddEnglishCounterA(PDH_HQUERY hQuery, LPCSTR szFullCounterPath,
-				   DWORD_PTR dwUserData, PDH_HCOUNTER *phCounter);
 
 static PDH_HQUERY query;
 static PDH_HCOUNTER counter1;
@@ -61,14 +54,31 @@ static bool load_init (void)
   if (!tried) {
     tried = true;
 
-    if (!((PdhOpenQueryA (NULL, 0, &query) == ERROR_SUCCESS) &&
-	  (PdhAddEnglishCounterA (query, "\\Processor(_Total)\\% Processor Time",
-				  0, &counter1) == ERROR_SUCCESS) &&
-	  (PdhAddEnglishCounterA (query, "\\System\\Processor Queue Length",
-				  0, &counter2) == ERROR_SUCCESS))) {
-      debug_printf("loadavg PDH initialization failed\n");
-      return false;
-    }
+    PDH_STATUS status;
+
+    status = PdhOpenQueryW (NULL, 0, &query);
+    if (status != STATUS_SUCCESS)
+      {
+	debug_printf ("PdhOpenQueryW, status %y", status);
+	return false;
+      }
+    status = PdhAddEnglishCounterW (query,
+				    L"\\Processor(_Total)\\% Processor Time",
+				    0, &counter1);
+    if (status != STATUS_SUCCESS)
+      {
+	debug_printf ("PdhAddEnglishCounterW(time), status %y", status);
+	return false;
+      }
+    status = PdhAddEnglishCounterW (query,
+				    L"\\System\\Processor Queue Length",
+				    0, &counter2);
+
+    if (status != STATUS_SUCCESS)
+      {
+	debug_printf ("PdhAddEnglishCounterW(queue length), status %y", status);
+	return false;
+      }
 
     mutex = CreateMutex(&sec_all_nih, FALSE, "cyg.loadavg.mutex");
     if (!mutex) {
@@ -98,10 +108,7 @@ static bool get_load (double *load)
   if (ret != ERROR_SUCCESS)
     return false;
 
-  SYSTEM_INFO sysinfo;
-  GetSystemInfo (&sysinfo);
-
-  double running = fmtvalue1.doubleValue * sysinfo.dwNumberOfProcessors / 100;
+  double running = fmtvalue1.doubleValue * wincap.cpu_count () / 100;
 
   /* Estimate the number of runnable processes using ProcessorQueueLength */
   PDH_FMT_COUNTERVALUE fmtvalue2;

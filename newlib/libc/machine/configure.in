@@ -25,6 +25,7 @@ if test -n "${machine_dir}"; then
   case ${machine_dir} in
 	a29k) AC_CONFIG_SUBDIRS(a29k) ;;
 	aarch64) AC_CONFIG_SUBDIRS(aarch64) ;;
+	amdgcn) AC_CONFIG_SUBDIRS(amdgcn) ;;
 	arc) AC_CONFIG_SUBDIRS(arc) ;;
 	arm) AC_CONFIG_SUBDIRS(arm) ;;
 	bfin) AC_CONFIG_SUBDIRS(bfin) ;;
@@ -61,8 +62,10 @@ if test -n "${machine_dir}"; then
 	nds32) AC_CONFIG_SUBDIRS(nds32) ;;
 	necv70) AC_CONFIG_SUBDIRS(necv70) ;;
 	nios2) AC_CONFIG_SUBDIRS(nios2) ;;
+	nvptx) AC_CONFIG_SUBDIRS(nvptx) ;;
 	or1k) AC_CONFIG_SUBDIRS(or1k) ;;
 	powerpc) AC_CONFIG_SUBDIRS(powerpc) ;;
+	pru) AC_CONFIG_SUBDIRS(pru) ;;
 	rl78) AC_CONFIG_SUBDIRS(rl78) ;;
 	rx) AC_CONFIG_SUBDIRS(rx) ;;
 	sh) AC_CONFIG_SUBDIRS(sh) ;;

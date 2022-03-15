@@ -807,9 +807,9 @@ get_posix_access (PSECURITY_DESCRIPTOR psd,
 			  lacl[pos].a_id = ACL_UNDEFINED_ID;
 			  lacl[pos].a_perm = CYG_ACE_MASK_TO_POSIX (ace->Mask);
 			  aclsid[pos] = well_known_null_sid;
+			  has_class_perm = true;
+			  class_perm = lacl[pos].a_perm;
 			}
-		      has_class_perm = true;
-		      class_perm = lacl[pos].a_perm;
 		    }
 		  if (ace->Header.AceFlags & SUB_CONTAINERS_AND_OBJECTS_INHERIT)
 		    {
@@ -820,9 +820,9 @@ get_posix_access (PSECURITY_DESCRIPTOR psd,
 			  lacl[pos].a_id = ACL_UNDEFINED_ID;
 			  lacl[pos].a_perm = CYG_ACE_MASK_TO_POSIX (ace->Mask);
 			  aclsid[pos] = well_known_null_sid;
+			  has_def_class_perm = true;
+			  def_class_perm = lacl[pos].a_perm;
 			}
-		      has_def_class_perm = true;
-		      def_class_perm = lacl[pos].a_perm;
 		    }
 		}
 	    }
@@ -1638,8 +1638,8 @@ char *
 __acltotext (aclent_t *aclbufp, int aclcnt, const char *prefix, char separator,
 	     int options)
 {
-  if (!aclbufp || aclcnt < 1 || aclcnt > MAX_ACL_ENTRIES
-      || aclsort32 (aclcnt, 0, aclbufp))
+  if (!aclbufp || aclcnt < 0 || aclcnt > MAX_ACL_ENTRIES
+      || (aclcnt > 0 && aclsort32 (aclcnt, 0, aclbufp)))
     {
       set_errno (EINVAL);
       return NULL;
